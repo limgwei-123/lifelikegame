@@ -1,0 +1,17 @@
+# Web API
+fastapi
+uvicorn[standard]
+
+# DB / ORM
+SQLAlchemy>=2.0
+psycopg2-binary
+alembic
+
+# Config
+pydantic-settings
+python-dotenv
+
+# Quality / CI
+pytest
+httpx
+ruff
