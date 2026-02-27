@@ -1,5 +1,5 @@
 1) 用户与目标
-users (账号)
+users (用户账号)
 - id
 - email
 - display_name
