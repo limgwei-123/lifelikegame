@@ -1,0 +1,18 @@
+Metadata-Version: 2.4
+Name: lifelikegame
+Version: 0.1.0
+Summary: Add your description here
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+Requires-Dist: alembic>=1.18.4
+Requires-Dist: fastapi>=0.135.1
+Requires-Dist: httpx>=0.28.1
+Requires-Dist: psycopg2-binary>=2.9.11
+Requires-Dist: pydantic>=2.12.5
+Requires-Dist: pydantic-settings>=2.13.1
+Requires-Dist: python-dotenv>=1.2.2
+Requires-Dist: sqlalchemy[user]>=2.0.48
+Requires-Dist: uvicorn>=0.41.0
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: ruff; extra == "dev"

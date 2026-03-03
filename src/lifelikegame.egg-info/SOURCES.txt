@@ -1,0 +1,9 @@
+README.md
+pyproject.toml
+src/lifelikegame/__init__.py
+src/lifelikegame/main.py
+src/lifelikegame.egg-info/PKG-INFO
+src/lifelikegame.egg-info/SOURCES.txt
+src/lifelikegame.egg-info/dependency_links.txt
+src/lifelikegame.egg-info/requires.txt
+src/lifelikegame.egg-info/top_level.txt
