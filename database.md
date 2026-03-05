@@ -3,6 +3,7 @@ users (账号)
 - id
 - email
 - display_name
+- password
 - timezone
 - created_at
 - deleted_at
