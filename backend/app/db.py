@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 
 from sqlalchemy import create_engine,text
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
 
 load_dotenv()
 
@@ -13,7 +14,16 @@ if not DATABASE_URL:
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush= False, bind= engine)
 
+Base = declarative_base()
+
 def db_ping() -> str:
   with engine.connect() as conn:
     version = conn.execute(text("SELECT version();")).scalar()
   return version
+
+def get_db():
+  db = SessionLocal()
+  try:
+    yield db
+  finally:
+    db.close()
