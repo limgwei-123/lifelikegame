@@ -1,9 +1,11 @@
 from fastapi import FastAPI
 from app.db import db_ping
-from app.auth.router import router as auth_router
+from app.routers.public import router as public_router
+from app.routers.protected import router as protected_router
 
 app = FastAPI()
-app.include_router(auth_router)
+app.include_router(public_router)
+app.include_router(protected_router)
 
 @app.get("/health")
 def health():
