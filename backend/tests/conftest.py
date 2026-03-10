@@ -14,6 +14,7 @@ from app.db import Base, get_db
 
 from app.users.models import User
 
+
 TEST_DATABASE_URL = os.getenv(
     "TEST_DATABASE_URL",
     "postgresql://postgres:postgres@127.0.0.1:5433/lifelikegame_test"
@@ -27,6 +28,7 @@ TestingSessionLocal = sessionmaker(
     autoflush=False,
     bind=test_engine
 )
+
 
 @pytest.fixture(scope="session", autouse=True)
 def create_tables():

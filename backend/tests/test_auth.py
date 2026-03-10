@@ -1,4 +1,4 @@
-def test_signup_success(client, test_user):
+def test_signup_success(client):
     response = client.post("/auth/signup", json={
         'email': "newuser@test.com",
         'password': "password123"
