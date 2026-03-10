@@ -7,15 +7,34 @@ from fastapi.testclient import TestClient
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from app.main import app
+from app.db import Base, engine, get_db, SessionLocal
 
-class FakeUser:
-    def __init__(self, id, email):
-        self.id = id
-        self.email = email
+from app.users.models import User
+
+@pytest.fixture(scope="session", autouse=True)
+def create_tables():
+   Base.metadata.create_all(bind=engine)
+   yield
+   Base.metadata.drop_all(bind=engine)
 
 @pytest.fixture
-def client():
-  return TestClient(app)
+def db():
+    db = SessionLocal()
+    yield db
+    db.rollback()
+    db.close()
+
+@pytest.fixture
+def client(db):
+    def override_get_db():
+        yield db
+
+    app.dependency_overrides[get_db] = override_get_db
+
+    with TestClient(app) as c:
+        yield c
+
+    app.dependency_overrides.clear()
 
 @pytest.fixture
 def test_user(client):
@@ -32,11 +51,6 @@ def test_user(client):
 
 @pytest.fixture
 def access_token(client,test_user):
-  client.post(
-        "/auth/signup",
-        json=test_user,
-    )
-
   login_response = client.post(
         "/auth/login",
         json=test_user,
