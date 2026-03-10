@@ -16,8 +16,7 @@ from app.users.models import User
 
 
 TEST_DATABASE_URL = os.getenv(
-    "TEST_DATABASE_URL",
-    "postgresql://postgres:postgres@127.0.0.1:5433/lifelikegame_test"
+    "TEST_DATABASE_URL"
 )
 
 
