@@ -1,25 +1,42 @@
 import pytest
 import sys
+import os
 from pathlib import Path
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from app.main import app
-from app.db import Base, engine, get_db, SessionLocal
+from app.db import Base, get_db
 
 from app.users.models import User
 
+TEST_DATABASE_URL = os.getenv(
+    "TEST_DATABASE_URL",
+    "postgresql://postgres:postgres@db:5432/lifelikegame_test"
+)
+
+
+
+test_engine = create_engine(TEST_DATABASE_URL)
+TestingSessionLocal = sessionmaker(
+    autocommit=False,
+    autoflush=False,
+    bind=test_engine
+)
+
 @pytest.fixture(scope="session", autouse=True)
 def create_tables():
-   Base.metadata.create_all(bind=engine)
+   Base.metadata.create_all(bind=test_engine)
    yield
-   Base.metadata.drop_all(bind=engine)
+   Base.metadata.drop_all(bind=test_engine)
 
 @pytest.fixture
 def db():
-    db = SessionLocal()
+    db = TestingSessionLocal()
     yield db
     db.rollback()
     db.close()

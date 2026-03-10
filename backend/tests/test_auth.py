@@ -1,7 +1,10 @@
 def test_signup_success(client, test_user):
-    response = client.post("/auth/signup", json=test_user)
+    response = client.post("/auth/signup", json={
+        'email': "newuser@test.com",
+        'password': "password123"
+    })
 
-    assert response.status_code in (200, 201,409)
+    assert response.status_code in (200, 201)
 
 
 def test_login_success(client, test_user):
