@@ -1,11 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.auth.deps import get_current_user
 from app.auth.schemas import (
   LoginRequest,
   SignupRequest,
-  TokenResponse,
+  TokenResponse
+)
+
+from app.users.schemas import (
   UserMeResponse
 )
 
@@ -58,11 +60,4 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
   return TokenResponse(
     access_token=token,
     token_type="bearer"
-  )
-
-@router.get("/me", response_model=UserMeResponse)
-def me(current_user: User = Depends(get_current_user)):
-  return UserMeResponse(
-    id = str(current_user.id),
-    email=current_user.email
   )

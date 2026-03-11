@@ -1,10 +1,10 @@
 def test_me_without_token(client):
-    response = client.get("auth/me")
+    response = client.get("profile/me")
     assert response.status_code == 401
 
 
 def test_me_success(client, access_token):
-    response = client.get("auth/me", headers={
+    response = client.get("profile/me", headers={
             "Authorization": f"Bearer {access_token}"
         })
 
