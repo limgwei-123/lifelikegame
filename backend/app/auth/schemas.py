@@ -1,4 +1,5 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, ConfigDict
+import uuid
 
 class SignupRequest(BaseModel):
   email: EmailStr
@@ -9,9 +10,13 @@ class LoginRequest(BaseModel):
   password: str
 
 class TokenResponse(BaseModel):
+  model_config = ConfigDict(from_attributes=True)
+
   access_token: str
   token_type: str = "bearer"
 
 class UserMeResponse(BaseModel):
-  id: str
+  model_config = ConfigDict(from_attributes=True)
+
+  id: uuid.UUID
   email: EmailStr
