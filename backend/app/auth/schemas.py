@@ -14,9 +14,3 @@ class TokenResponse(BaseModel):
 
   access_token: str
   token_type: str = "bearer"
-
-class UserMeResponse(BaseModel):
-  model_config = ConfigDict(from_attributes=True)
-
-  id: uuid.UUID
-  email: EmailStr

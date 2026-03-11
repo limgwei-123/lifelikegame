@@ -1,7 +1,7 @@
 from pydantic import BaseModel, ConfigDict
 from datetime import date
 from typing import Optional
-from app.auth.schemas import UserMeResponse
+from app.users.schemas import UserMeResponse
 import uuid
 
 class CreateGoalRequest(BaseModel):
