@@ -1,12 +1,14 @@
 import uuid
 from datetime import datetime
-
+from typing import TYPE_CHECKING
 from sqlalchemy import String, DateTime
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
 
+if TYPE_CHECKING:
+  from app.goals.models import Goal
 class User(Base):
   __tablename__ = "users"
 
@@ -37,3 +39,5 @@ class User(Base):
     DateTime,
     default=datetime.now
   )
+
+  goals: Mapped[list["Goal"]] = relationship("Goal", back_populates="user")
