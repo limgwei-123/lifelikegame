@@ -1,13 +1,15 @@
-from fastapi import Depends
 from sqlalchemy.orm import Session
-from app.db import get_db
 from app.goals.models import Goal
 
-def create_goal(payload,user_id,db: Session):
-  goal_data = payload.model_dump()
-  goal_data['user_id'] = user_id
-  goal = Goal(**goal_data)
-  db.add(goal)
-  db.commit()
-  db.refresh(goal)
-  return goal
+class GoalRepository:
+  def __init__(self, db: Session):
+    self.db = db
+
+  def create_goal(self, payload, user_id):
+    goal_data = payload.model_dump()
+    goal_data['user_id'] = user_id
+    goal = Goal(**goal_data)
+    self.db.add(goal)
+    self.db.commit()
+    self.db.refresh(goal)
+    return goal

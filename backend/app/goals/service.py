@@ -1,5 +1,9 @@
-from app.goals import repository as goal_repository
+from app.goals.repository import GoalRepository
 from sqlalchemy.orm import Session
-def create_goal(payload,user_id, db:Session):
 
-  return goal_repository.create_goal(payload, user_id, db)
+class GoalService:
+  def __init__(self, goal_repo: GoalRepository):
+    self.goal_repo = goal_repo
+
+  def create_goal(self,payload,user_id):
+    return self.goal_repo.create_goal(payload, user_id)
