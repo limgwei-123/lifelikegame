@@ -3,19 +3,22 @@ from sqlalchemy import select
 
 from app.users.models import User
 
-def get_user_by_email(db: Session, email: str) -> User | None:
-  result = db.execute(
-    select(User).where(User.email == email)
-  )
-  return result.scalar_one_or_none()
 
-def get_user_by_id(db: Session, user_id: str) -> User | None:
-  return db.get(User, user_id)
+class UserRepository:
+    def __init__(self, db: Session):
+        self.db = db
 
-def create_user(db: Session, user: User) -> User:
+    def get_user_by_email(self, email: str) -> User | None:
+        result = self.db.execute(
+            select(User).where(User.email == email)
+        )
+        return result.scalar_one_or_none()
 
-  db.add(user)
-  db.commit()
-  db.refresh(user)
+    def get_user_by_id(self, user_id: str) -> User | None:
+        return self.db.get(User, user_id)
 
-  return user
+    def create_user(self, user: User) -> User:
+        self.db.add(user)
+        self.db.commit()
+        self.db.refresh(user)
+        return user

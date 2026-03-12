@@ -1,29 +1,32 @@
-from sqlalchemy.orm import Session
 
 from app.auth.security import hash_password, verify_password
-from app.users.service import get_user_by_email, create_user
+from app.users.interfaces import UserServiceInterface
 
-def signup_user(db: Session, email: str, password: str):
-  existing_user = get_user_by_email(db, email)
-  if existing_user:
-    raise ValueError("Email already registered")
+class AuthService:
 
-  password_hash = hash_password(password)
+  def __init__(self, user_service: UserServiceInterface):
+    self.user_service = user_service
 
-  user = create_user(
-    db=db,
-    email=email,
-    password_hash=password_hash
-  )
+  def signup_user(self, email: str, password: str):
+    existing_user = self.user_service.get_user_by_email(email)
+    if existing_user:
+      raise ValueError("Email already registered")
 
-  return user
+    password_hash = hash_password(password)
 
-def authenticate_user(db: Session, email: str, password: str):
-  user = get_user_by_email(db, email)
-  if not user:
-    return None
+    user = self.user_service.create_user(
+      email=email,
+      password_hash=password_hash
+    )
 
-  if not verify_password(password, user.password_hash):
-    return None
+    return user
 
-  return user
+  def authenticate_user(self, email: str, password: str):
+    user = self.user_service.get_user_by_email(email)
+    if not user:
+      return None
+
+    if not verify_password(password, user.password_hash):
+      return None
+
+    return user

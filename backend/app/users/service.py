@@ -1,17 +1,20 @@
-from sqlalchemy.orm import Session
 from app.users.models import User
-from app.users import repository as user_repository
+from app.users.repository import UserRepository
 
-def get_user_by_email(db: Session, email: str) -> User | None:
-  return user_repository.get_user_by_email(db, email)
+class UserService:
+  def __init__(self, user_repo: UserRepository):
+    self.user_repo = user_repo
 
-def get_user_by_id(db: Session, user_id: str) -> User | None:
-  return user_repository.get_user_by_id(db, user_id)
+  def get_user_by_email(self, email: str) -> User | None:
+    return self.user_repo.get_user_by_email(email)
+
+  def get_user_by_id(self, user_id: str) -> User | None:
+    return self.user_repo.get_user_by_id(user_id)
 
 
-def create_user(db: Session, email: str, password_hash: str) -> User:
-  user = User(
-    email = email,
-    password_hash = password_hash
-  )
-  return user_repository.create_user(db, user)
+  def create_user(self,email: str, password_hash: str) -> User:
+    user = User(
+      email = email,
+      password_hash = password_hash
+    )
+    return self.user_repo.create_user(user)

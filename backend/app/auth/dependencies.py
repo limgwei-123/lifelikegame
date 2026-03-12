@@ -1,18 +1,25 @@
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError
-from sqlalchemy.orm import Session
 
 from app.auth.security import decode_token
-from app.db import get_db
+from app.auth.interfaces import AuthServiceInterface
+from app.auth.service import AuthService
+
+from app.users.dependencies import get_user_service
+from app.users.interfaces import UserServiceInterface
 from app.users.models import User
-from app.users.service import get_user_by_id
 
 bearer_scheme = HTTPBearer()
 
+def get_auth_service(
+    user_service: UserServiceInterface = Depends(get_user_service)
+)-> AuthServiceInterface:
+  return AuthService(user_service)
+
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
-    db:Session = Depends(get_db),
+    user_service: UserServiceInterface = Depends(get_user_service),
 )->User:
   token = credentials.credentials
 
@@ -32,7 +39,7 @@ def get_current_user(
       detail= "Invalid token",
     )
 
-  user = get_user_by_id(db, user_id)
+  user = user_service.get_user_by_id(user_id)
 
   if not user:
     raise HTTPException(

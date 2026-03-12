@@ -1,20 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
 
-from app.auth.schemas import (
-  LoginRequest,
-  SignupRequest,
-  TokenResponse
-)
-
-from app.users.schemas import (
-  UserMeResponse
-)
+from app.auth.schemas import LoginRequest, SignupRequest, TokenResponse
+from app.users.schemas import UserMeResponse
 
 from app.auth.security import create_access_token
-from app.auth.service import authenticate_user, signup_user
-from app.db import get_db
-from app.users.models import User
+from app.auth.dependencies import get_auth_service
+from app.auth.interfaces import AuthServiceInterface
+
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -23,10 +15,9 @@ router = APIRouter(prefix="/auth", tags=["auth"])
   response_model=UserMeResponse,
   status_code=status.HTTP_201_CREATED
 )
-def signup(payload: SignupRequest, db:Session = Depends(get_db)):
+def signup(payload: SignupRequest, auth_service: AuthServiceInterface = Depends(get_auth_service)):
   try:
-    user = signup_user(
-      db=db,
+    user = auth_service.signup_user(
       email=payload.email,
       password=payload.password
     )
@@ -42,9 +33,8 @@ def signup(payload: SignupRequest, db:Session = Depends(get_db)):
   )
 
 @router.post("/login", response_model=TokenResponse)
-def login(payload: LoginRequest, db: Session = Depends(get_db)):
-  user = authenticate_user(
-    db=db,
+def login(payload: LoginRequest, auth_service: AuthServiceInterface = Depends(get_auth_service)):
+  user = auth_service.authenticate_user(
     email=payload.email,
     password=payload.password
   )
