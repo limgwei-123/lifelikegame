@@ -5,7 +5,7 @@ from app.goals.schemas import (
 )
 from sqlalchemy.orm import Session
 from app.goals import service as goal_service
-from app.auth.deps import get_current_user
+from app.auth.dependencies import get_current_user
 from app.db import get_db
 
 router = APIRouter(prefix="/goals", tags=["goals"])
