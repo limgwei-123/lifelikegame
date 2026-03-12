@@ -3,8 +3,7 @@ from app.users.schemas import (
   UserMeResponse
 )
 from app.auth.dependencies import get_current_user
-from app.users.models import User
-from app.users.service import UserService
+
 from app.users.dependencies import get_user_service
 from app.users.interfaces import UserServiceInterface
 
@@ -12,7 +11,7 @@ router = APIRouter(prefix="/profile", tags=["profile"])
 
 
 @router.get("/me", response_model=UserMeResponse)
-def me(current_user: User = Depends(get_current_user)):
+def me(current_user: UserMeResponse = Depends(get_current_user)):
   return current_user
 
 @router.get("/{user_id}")
