@@ -12,8 +12,6 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 from app.main import app
 from app.db import Base, get_db
 
-from app.users.models import User
-
 
 TEST_DATABASE_URL = os.getenv(
     "TEST_DATABASE_URL"
@@ -66,13 +64,26 @@ def test_user(client):
 
     return user
 
-
 @pytest.fixture
-def access_token(client,test_user):
-  login_response = client.post(
-        "/auth/login",
-        json=test_user,
-    )
+def auth_user(client):
 
-  data = login_response.json()
-  return data["access_token"]
+    user = {
+        "email": "auth@auth.com",
+        "password": "password123"
+    }
+
+    client.post("/auth/signup", json=user)
+
+    login = client.post("/auth/login", json=user).json()
+
+    token = login["access_token"]
+
+    me = client.get(
+        "/users/me",
+        headers={"Authorization": f"Bearer {token}"}
+    ).json()
+
+    return {
+        "access_token": token,
+        "user_id": me["id"]
+    }
