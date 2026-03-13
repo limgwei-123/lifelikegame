@@ -13,7 +13,7 @@ def test_get_goal_by_id(client, test_user):
   token = login_response.json()["access_token"]
 
   me_response = client.get(
-        "/profile/me",
+        "/users/me",
         headers={"Authorization": f"Bearer {token}"}
     )
 

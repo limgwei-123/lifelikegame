@@ -7,7 +7,7 @@ from app.auth.dependencies import get_current_user
 from app.users.dependencies import get_user_service
 from app.users.interfaces import UserServiceInterface
 
-router = APIRouter(prefix="/profile", tags=["profile"])
+router = APIRouter(prefix="/users", tags=["users"])
 
 
 @router.get("/me", response_model=UserMeResponse)
