@@ -13,3 +13,6 @@ class GoalRepository:
     self.db.commit()
     self.db.refresh(goal)
     return goal
+
+  def get_goal_by_id(self, id):
+    return self.db.get(Goal, id)
