@@ -14,5 +14,5 @@ class GoalRepository:
     self.db.refresh(goal)
     return goal
 
-  def get_goal_by_id(self, id):
-    return self.db.get(Goal, id)
+  def get_by_gold_id_and_user_id(self, goal_id, user_id):
+    return self.db.query(Goal).filter(Goal.id == goal_id, Goal.user_id == user_id).first()

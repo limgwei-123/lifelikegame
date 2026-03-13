@@ -1,7 +1,7 @@
 
 from app.auth.security import hash_password, verify_password
 from app.users.interfaces import UserServiceInterface
-
+from app.errors.exception import ConflictError
 class AuthService:
 
   def __init__(self, user_service: UserServiceInterface):
@@ -10,7 +10,7 @@ class AuthService:
   def signup_user(self, email: str, password: str):
     existing_user = self.user_service.get_user_by_email(email)
     if existing_user:
-      raise ValueError("Email already registered")
+      raise ConflictError("Email already registered")
 
     password_hash = hash_password(password)
 

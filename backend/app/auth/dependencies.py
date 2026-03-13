@@ -12,6 +12,12 @@ from app.users.models import User
 
 bearer_scheme = HTTPBearer()
 
+def _unauthorized(detail: str = "Unauthorized") -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail=detail,
+    )
+
 def get_auth_service(
     user_service: UserServiceInterface = Depends(get_user_service)
 )-> AuthServiceInterface:
@@ -28,23 +34,14 @@ def get_current_user(
     user_id = payload.get("sub")
 
     if not user_id:
-      raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Invalid token"
-      )
+      raise _unauthorized("Invalid token")
 
   except JWTError:
-    raise HTTPException(
-      status_code=status.HTTP_401_UNAUTHORIZED,
-      detail= "Invalid token",
-    )
+    raise _unauthorized("Invalid token")
 
   user = user_service.get_user_by_id(user_id)
 
   if not user:
-    raise HTTPException(
-      status_code=status.HTTP_401_UNAUTHORIZED,
-      detail="User not found",
-    )
+    raise _unauthorized("Invalid token")
 
   return user

@@ -16,15 +16,10 @@ router = APIRouter(prefix="/auth", tags=["auth"])
   status_code=status.HTTP_201_CREATED
 )
 def signup(payload: SignupRequest, auth_service: AuthServiceInterface = Depends(get_auth_service)):
-  try:
-    user = auth_service.signup_user(
+
+  user = auth_service.signup_user(
       email=payload.email,
       password=payload.password
-    )
-  except ValueError as e:
-    raise HTTPException(
-      status_code=status.HTTP_409_CONFLICT,
-      detail=str(e),
     )
 
   return UserMeResponse(
@@ -38,12 +33,6 @@ def login(payload: LoginRequest, auth_service: AuthServiceInterface = Depends(ge
     email=payload.email,
     password=payload.password
   )
-
-  if not user:
-    raise HTTPException(
-      status_code=status.HTTP_401_UNAUTHORIZED,
-      detail="Invalid credentials"
-    )
 
   token = create_access_token(sub=str(user.id))
 

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from app.users.schemas import (
   UserMeResponse
 )
@@ -16,9 +16,4 @@ def me(current_user: UserMeResponse = Depends(get_current_user)):
 
 @router.get("/{user_id}")
 def get_user(user_id: str, user_service: UserServiceInterface = Depends(get_user_service)):
-  user = user_service.get_user_by_id(user_id)
-
-  if not user:
-    raise HTTPException(status_code=404, detail="User not found")
-
-  return user
+  return user_service.get_user_by_id(user_id)
