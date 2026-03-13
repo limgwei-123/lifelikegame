@@ -26,7 +26,9 @@ def create_goal(payload: CreateGoalRequest,
 
   return goal
 
-@router.get('/{id}', response_model= GoalResponse, status_code= status.HTTP_200_OK)
-def get_goal_by_id(id: int, goal_service: GoalServiceInterface = Depends(get_goal_service)):
-  goal = goal_service.get_goal_by_id(id)
+@router.get('/{goal_id}', response_model= GoalResponse, status_code= status.HTTP_200_OK)
+def get_goal_by_id(goal_id: int,
+                   current_user = Depends(get_current_user),
+                   goal_service: GoalServiceInterface = Depends(get_goal_service)):
+  goal = goal_service.get_goal_by_id(goal_id, current_user.id)
   return goal
