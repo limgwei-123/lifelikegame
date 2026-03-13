@@ -87,3 +87,22 @@ def auth_user(client):
         "access_token": token,
         "user_id": me["id"]
     }
+
+@pytest.fixture
+def auth_headers(auth_user):
+    return {
+        "Authorization": f"Bearer {auth_user['access_token']}"
+    }
+
+@pytest.fixture
+def goal(client, auth_headers):
+    res = client.post(
+        "/goals",
+        json={
+            "title": "Test Goal",
+            "start_date": "2026-03-14"
+        },
+        headers=auth_headers,
+    )
+    assert res.status_code in (200, 201)
+    return res.json()

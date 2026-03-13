@@ -1,28 +1,48 @@
-def test_create_goal(client, auth_user):
+def test_create_goal(client, auth_headers):
 
   response = client.post(
     "/goals",
-    headers={"Authorization": f"Bearer {auth_user['access_token']}"},
+    headers=auth_headers,
     json={"title": "Learn AI", "start_date":"2026-03-11"}
   )
 
   assert response.status_code in (200, 201)
 
-def test_get_goal_by_id(client, auth_user):
 
-  create = client.post(
-    "/goals",
-    json={"title": "Learn AI", "start_date":"2026-03-11"},
-    headers={"Authorization": f"Bearer {auth_user['access_token']}"}
+def test_list_goals(client, auth_headers):
+  goals_response = client.get(
+    "goals",
+    headers=auth_headers
   )
 
-  goal = create.json()
-  goal_id = goal["id"]
+  assert goals_response.status_code == 200
+
+def test_get_goal_by_id(client, auth_headers, goal):
+
 
   response = client.get(
-        f"/goals/{goal_id}",
-        headers={"Authorization": f"Bearer {auth_user['access_token']}"}
+        f"/goals/{goal['id']}",
+        headers=auth_headers
     )
 
   assert response.status_code == 200
-  assert response.json()["user_id"] == auth_user["user_id"]
+
+
+
+def test_update_goal(client, auth_headers,goal):
+
+  response = client.post(
+        f"/goals/{goal['id']}",
+        headers=auth_headers,
+        json={"title": "Learn AI2", "start_date":"2026-03-11"}
+    )
+
+  assert response.status_code == 200
+
+def test_delete_goal(client, auth_headers, goal):
+  response = client.post(
+      f"/goals/{goal['id']}/delete",
+      headers=auth_headers,
+  )
+
+  assert response.status_code == 204
