@@ -1,1 +1,1 @@
-16-3-2026: Fever, rest for a day
+2026/3/16: Fever, rest for a day
