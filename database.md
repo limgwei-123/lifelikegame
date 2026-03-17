@@ -21,7 +21,7 @@ goals (目标)
 - created_at
 - deleted_at
 
-2) 计划
+2) 计划 （先跳）
 (当顾客不满意可以manual adjust或者告诉我们什么不满意，我们再重新生成一个新的，不需要plan version) (一个计划会有可以有个tasks)
 plans(针对某个 goal 的“可执行方案)
 - id
@@ -33,7 +33,7 @@ plans(针对某个 goal 的“可执行方案)
 - created_at
 - deleted_at
 
-plan_revisions (计划的“修改历史/版本记录”)
+plan_revisions (计划的“修改历史/版本记录”)（先跳）
 - id
 - plan_id
 - revision_no (1,2,3)
@@ -45,7 +45,8 @@ plan_revisions (计划的“修改历史/版本记录”)
 3) 任务定义（模板）与排程（可扩展到任何频率）
 tasks (任务模板（要做什么）)
 - id
-- plan_id
+- plan_id(先跳)
+- goal_id
 - title
 - scoring_scheme_id( get_from_scope_id)
 - description (optional)
