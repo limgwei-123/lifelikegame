@@ -69,9 +69,9 @@ task_schedules (这个任务“什么时候做”（排程规则）)
 - created_at
 - deleted_at
 
-4) 每日任务实例（今天要做什么）与打卡
+4) 每日任务实例（今天要做什么）与打卡 
 
-task_instances (某一天实际“应该出现”的任务条目（今日待办）)
+task_instances (某一天实际“应该出现”的任务条目（今日待办）) 
 - id
 - UNIQUE(task_id, date)
 - task_id
