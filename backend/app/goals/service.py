@@ -15,8 +15,8 @@ class GoalService:
     return self.goal_repo.list_goals(user_id)
 
   def get_goal_by_id(self, goal_id, user_id):
-    self._get_owned_goal_or_raise(goal_id, user_id)
-    return self.goal_repo.get_by_goal_id_and_user_id(goal_id, user_id)
+    return self._get_owned_goal_or_raise(goal_id, user_id)
+
 
   def update_goal(self, goal_id, user_id, data: UpdateGoalRequest):
     goal = self._get_owned_goal_or_raise(goal_id, user_id)
