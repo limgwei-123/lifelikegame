@@ -64,8 +64,8 @@ class Task(Base):
 
    updated_at: Mapped[datetime] = mapped_column(
          DateTime(timezone=True),
-         default=lambda: datetime.now,
-         onupdate=lambda: datetime.now,
+         default= datetime.now,
+         onupdate=datetime.now,
          nullable=False,
       )
 

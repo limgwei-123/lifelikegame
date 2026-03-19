@@ -106,3 +106,15 @@ def goal(client, auth_headers):
     )
     assert res.status_code in (200, 201)
     return res.json()
+
+@pytest.fixture
+def task(client, auth_headers,goal):
+    res = client.post(
+        f"/goals/{goal['id']}/tasks",
+        json={
+            "title": "Test Task",
+        },
+        headers=auth_headers,
+    )
+    assert res.status_code in (200, 201)
+    return res.json()

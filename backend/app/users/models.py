@@ -42,4 +42,4 @@ class User(Base):
   )
 
   goals: Mapped[list["Goal"]] = relationship("Goal", back_populates="user")
-  goals: Mapped[list["Task"]] = relationship("Task", back_populates="user")
+  tasks: Mapped[list["Task"]] = relationship("Task", back_populates="user")

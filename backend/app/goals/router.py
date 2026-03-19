@@ -32,7 +32,7 @@ def get_goal_by_id(goal_id,
                    goal_service: GoalServiceInterface = Depends(get_goal_service)):
     return goal_service.get_goal_by_id(goal_id, current_user.id)
 
-@router.post("/{goal_id}", response_model= GoalResponse)
+@router.post("/{goal_id}", response_model= GoalResponse , status_code= status.HTTP_200_OK)
 def update_goal(goal_id,
                 paylod:UpdateGoalRequest,
                 current_user = Depends(get_current_user),
@@ -43,7 +43,7 @@ def update_goal(goal_id,
         data = paylod
     )
 
-@router.post("/{goal_id}/delete", status_code=204)
+@router.post("/{goal_id}/delete", status_code=status.HTTP_204_NO_CONTENT)
 def delete_goal(
     goal_id,
     current_user = Depends(get_current_user),

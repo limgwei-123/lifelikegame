@@ -9,15 +9,16 @@ class TaskService:
     self.goal_repo = goal_repo
 
 
-  def create_task(self, user_id, payload: CreateTaskRequest):
-    goal = self.goal_repo.get_by_goal_id_and_user_id(payload.goal_id, user_id)
+  def create_task(self, goal_id, user_id, payload: CreateTaskRequest):
+    goal = self.goal_repo.get_by_goal_id_and_user_id(goal_id, user_id)
     data = payload.model_dump()
     data['user_id'] = goal.user_id
     data['goal_id'] = goal.id
     return self.task_repo.create_task(data)
 
-  def list_tasks_by_goal_id(self, goal_id):
-    return self.task_repo.list_tasks_by_goal_id(goal_id)
+  def list_tasks_by_goal_id(self, goal_id, user_id):
+    goal = self._get_owned_goal_or_raise(goal_id = goal_id, user_id = user_id)
+    return self.task_repo.list_tasks_by_goal_id(goal.id)
 
   def list_tasks_by_user_id(self, user_id):
     return self.task_repo.list_tasks_by_user_id(user_id)
