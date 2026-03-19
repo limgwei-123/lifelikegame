@@ -9,6 +9,7 @@ from app.db import Base
 if TYPE_CHECKING:
     from app.users.models import Goal
     from app.users.models import User
+    from app.users.models import TaskSchedule
 
 class Task(Base):
    __tablename__ = "tasks"
@@ -76,3 +77,4 @@ class Task(Base):
 
    goal: Mapped["Goal"] = relationship("Goal", back_populates="tasks")
    user: Mapped["User"] = relationship("User",back_populates="tasks")
+   task_schedules: Mapped[list["TaskSchedule"]] = relationship("TaskSchedule", back_populates="task")
