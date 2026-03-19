@@ -47,6 +47,7 @@ tasks (任务模板（要做什么）)
 - id
 - plan_id(先跳)
 - goal_id
+- user_id (为了方便检索，不是实际关系)
 - title
 - scoring_scheme_id( get_from_scope_id)
 - description (optional)
@@ -69,9 +70,9 @@ task_schedules (这个任务“什么时候做”（排程规则）)
 - created_at
 - deleted_at
 
-4) 每日任务实例（今天要做什么）与打卡 
+4) 每日任务实例（今天要做什么）与打卡
 
-task_instances (某一天实际“应该出现”的任务条目（今日待办）) 
+task_instances (某一天实际“应该出现”的任务条目（今日待办）)
 - id
 - UNIQUE(task_id, date)
 - task_id
