@@ -2,7 +2,7 @@ from typing import Protocol
 import uuid
 
 class TaskScheduleServiceInterface(Protocol):
-  def create_task_schedule(self, user_id: uuid.UUID, payload):
+  def create_task_schedule(self, task_id, user_id: uuid.UUID, payload):
     ...
 
   def list_task_schedules_by_task_id(self, task_id):

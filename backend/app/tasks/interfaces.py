@@ -2,7 +2,7 @@ from typing import Protocol
 import uuid
 
 class TaskServiceInterface(Protocol):
-  def create_task(self, user_id: uuid.UUID, payload):
+  def create_task(self, goal_id, user_id: uuid.UUID, payload):
     ...
 
   def list_tasks_by_goal_id(self, goal_id):

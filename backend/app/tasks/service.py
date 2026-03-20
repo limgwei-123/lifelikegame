@@ -10,8 +10,8 @@ class TaskService:
 
 
   def create_task(self, goal_id, user_id, payload: CreateTaskRequest):
-    goal = self.goal_repo.get_by_goal_id_and_user_id(goal_id, user_id)
-    data = payload.model_dump()
+    goal = self._get_owned_goal_or_raise(goal_id, user_id)
+    data = payload.model_dump(exclude={"schedule"})
     data['user_id'] = goal.user_id
     data['goal_id'] = goal.id
     return self.task_repo.create_task(data)

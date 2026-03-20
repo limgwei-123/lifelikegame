@@ -11,6 +11,7 @@ def test_create_task_schedule(client, auth_headers,task):
     headers=auth_headers,
   )
 
+  print("Task Response:",task_response)
   assert task_response.status_code in (200, 201)
 
 def test_list_task_schedules_by_task_id(client, auth_headers, task):
