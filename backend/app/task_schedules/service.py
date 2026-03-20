@@ -11,7 +11,7 @@ class TaskScheduleService:
 
 
   def create_task_schedule(self, task_id, user_id, payload: CreateTaskScheduleRequest):
-    task = self.task_repo.get_by_task_id_and_user_id(task_id, user_id)
+    task = self._get_owned_task_or_raise(task_id, user_id)
     data = payload.model_dump()
     data['user_id'] = task.user_id
     data['task_id'] = task.id

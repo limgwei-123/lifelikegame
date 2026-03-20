@@ -7,17 +7,21 @@ from app.tasks.schemas import (
   TaskResponse
 )
 
+from app.task_workflows.schemas import TaskWithScheduleResponse
+
 from app.tasks.interfaces import TaskServiceInterface
 from app.tasks.dependencies import get_task_service
+from app.task_workflows.dependencies import get_task_workflow_service
+from app.task_workflows.interfaces import TaskWorkflowServiceInterface
 
 router = APIRouter(tags=["tasks"])
 
-@router.post('/goals/{goal_id}/tasks', response_model= TaskResponse, status_code= status.HTTP_201_CREATED)
+@router.post('/goals/{goal_id}/tasks', response_model= TaskWithScheduleResponse, status_code= status.HTTP_201_CREATED)
 def create_task(goal_id,
                 payload: CreateTaskRequest,
                 current_user = Depends(get_current_user),
-                task_service: TaskServiceInterface = Depends(get_task_service)):
-  return task_service.create_task(
+                task_workflow_service: TaskWorkflowServiceInterface = Depends(get_task_workflow_service)):
+  return task_workflow_service.create_task_with_schedule(
     goal_id = goal_id,
     user_id = current_user.id,
     payload = payload
