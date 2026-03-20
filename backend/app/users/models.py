@@ -10,6 +10,7 @@ from app.db import Base
 if TYPE_CHECKING:
   from app.goals.models import Goal
   from app.tasks.models import Task
+  from app.task_schedules.models import TaskSchedule
 class User(Base):
   __tablename__ = "users"
 
@@ -43,3 +44,4 @@ class User(Base):
 
   goals: Mapped[list["Goal"]] = relationship("Goal", back_populates="user")
   tasks: Mapped[list["Task"]] = relationship("Task", back_populates="user")
+  task_schedules: Mapped[list["TaskSchedule"]] = relationship("TaskSchedule", back_populates="user")
