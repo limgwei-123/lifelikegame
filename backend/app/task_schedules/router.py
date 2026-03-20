@@ -26,27 +26,27 @@ def list_task_schedules_by_task_id(task_id, current_user = Depends(get_current_u
 def list_task_schedules_by_user_id(current_user = Depends(get_current_user), task_schedule_service: TaskScheduleServiceInterface = Depends(get_task_schedule_service)):
   return task_schedule_service.list_task_schedules_by_user_id(user_id= current_user.id)
 
-@router.get('/task_schedules/{task_shcedule_id}', response_model= TaskScheduleResponse, status_code= status.HTTP_200_OK)
-def get_task_by_id(task_shcedule_id,
+@router.get('/task_schedules/{task_schedule_id}', response_model= TaskScheduleResponse, status_code= status.HTTP_200_OK)
+def get_task_by_id(task_schedule_id,
                    current_user = Depends(get_current_user),
                    task_schedule_service: TaskScheduleServiceInterface = Depends(get_task_schedule_service)):
-  return task_schedule_service.get_task_schedule_by_id(task_shcedule_id= task_shcedule_id, user_id= current_user.id)
+  return task_schedule_service.get_task_schedule_by_id(task_schedule_id= task_schedule_id, user_id= current_user.id)
 
-@router.post('/task_schedules/{task_shcedule_id}', response_model= TaskScheduleResponse, status_code= status.HTTP_200_OK)
-def update_task(task_shcedule_id,
+@router.post('/task_schedules/{task_schedule_id}', response_model= TaskScheduleResponse, status_code= status.HTTP_200_OK)
+def update_task(task_schedule_id,
                 payload: UpdateTaskScheduleRequest,
                 current_user = Depends(get_current_user),
                 task_schedule_service: TaskScheduleServiceInterface = Depends(get_task_schedule_service)):
-  return task_schedule_service.update_task(
-    task_shcedule_id= task_shcedule_id,
+  return task_schedule_service.update_task_schedule(
+    task_schedule_id= task_schedule_id,
     user_id= current_user.id,
     data= payload
   )
 
-@router.post("/task_schedules/{task_shcedule_id}/delete", status_code = status.HTTP_204_NO_CONTENT)
+@router.post("/task_schedules/{task_schedule_id}/delete", status_code = status.HTTP_204_NO_CONTENT)
 def delete_task(
-  task_shcedule_id,
+  task_schedule_id,
   current_user = Depends(get_current_user),
   task_schedule_service: TaskScheduleServiceInterface = Depends(get_task_schedule_service)
 ):
-  task_schedule_service.delete_task(task_shcedule_id=task_shcedule_id, user_id=current_user.id)
+  task_schedule_service.delete_task_schedule(task_schedule_id=task_schedule_id, user_id=current_user.id)

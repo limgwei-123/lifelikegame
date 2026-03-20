@@ -118,3 +118,18 @@ def task(client, auth_headers,goal):
     )
     assert res.status_code in (200, 201)
     return res.json()
+
+@pytest.fixture
+def task_schedule(client, auth_headers,task):
+    res = client.post(
+        f"/tasks/{task['id']}/task_schedules",
+        json={
+            "schedule_type": "daily",
+            "schedule_value_json": {
+                "additionalProp1": {}
+            },
+        },
+        headers=auth_headers,
+    )
+    assert res.status_code in (200, 201)
+    return res.json()

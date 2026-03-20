@@ -6,13 +6,13 @@ from app.task_schedules.models import ScheduleType
 
 class CreateTaskScheduleRequest(BaseModel):
   schedule_type: ScheduleType
-  scheducle_value_json: dict[str, Any]
+  schedule_value_json: dict[str, Any]
   start_date: date | None = None
   end_date: date | None = None
 
 class UpdateTaskScheduleRequest(BaseModel):
   schedule_type: ScheduleType
-  scheducle_value_json: dict[str, Any]
+  schedule_value_json: dict[str, Any]
   start_date: date | None = None
   end_date: date | None = None
 
