@@ -8,8 +8,7 @@ import enum
 from app.db import Base
 
 if TYPE_CHECKING:
-  from app.users.models import User
-  from app.users.models import Task
+  from app.models import *
 
 class ScheduleType(str, enum.Enum):
   DAILY = "daily"
@@ -80,6 +79,8 @@ class TaskSchedule(Base):
 
   task: Mapped['Task'] = relationship("Task", back_populates="task_schedules")
   user: Mapped['User'] = relationship("User", back_populates="task_schedules")
+
+  task_instances: Mapped[list["TaskInstance"]] = relationship("TaskInstance", back_populates="task_schedule")
 
 
 
