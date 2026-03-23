@@ -4,3 +4,5 @@
 2026/3/19: complete all of the function in tasks, task_scheduling(but haven't test yet)
 2026/3/20: Complete task scheduling, and also task workflow so can create task together with schedule
 2026/3/21：Go out for a day, skip, tomorrow start
+2026/3/22: Finishing task instances (basic)
+2026/3/23: Build a simple use case(tomorrow need to add current value to user) (now still left scoring schemes, point ledger, reward, redemptions)
