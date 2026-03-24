@@ -1,6 +1,6 @@
 from app.goals.repository import GoalRepository
 from app.goals.schemas import CreateGoalRequest,UpdateGoalRequest
-from app.errors.exception import NotFoundError
+from app.shared.ownership import get_owned_goal_or_raise
 
 class GoalService:
   def __init__(self, goal_repo: GoalRepository):
@@ -15,11 +15,11 @@ class GoalService:
     return self.goal_repo.list_goals(user_id)
 
   def get_goal_by_id(self, goal_id, user_id):
-    return self._get_owned_goal_or_raise(goal_id, user_id)
+    return get_owned_goal_or_raise(self.goal_repo,goal_id, user_id)
 
 
   def update_goal(self, goal_id, user_id, data: UpdateGoalRequest):
-    goal = self._get_owned_goal_or_raise(goal_id, user_id)
+    goal = get_owned_goal_or_raise(self.goal_repo,goal_id, user_id)
 
     return self.goal_repo.update_goal(
       goal,
@@ -27,13 +27,6 @@ class GoalService:
     )
 
   def delete_goal(self, goal_id, user_id):
-    goal = self._get_owned_goal_or_raise(goal_id, user_id)
+    goal = get_owned_goal_or_raise(self.goal_repo,goal_id, user_id)
 
     self.goal_repo.delete_goal(goal)
-
-
-  def _get_owned_goal_or_raise(self , goal_id, user_id):
-    goal = self.goal_repo.get_by_goal_id_and_user_id(goal_id, user_id)
-    if not goal:
-      raise NotFoundError("Goal not found")
-    return goal

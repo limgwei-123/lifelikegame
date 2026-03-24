@@ -6,4 +6,4 @@
 2026/3/21：Go out for a day, skip, tomorrow start
 2026/3/22: Finishing task instances (basic)
 2026/3/23: Build a simple use case(tomorrow need to add current value to user) (now still left scoring schemes, point ledger, reward, redemptions)
-2026/3/24: fever
+2026/3/24: fever, just make common function into single common file and call it

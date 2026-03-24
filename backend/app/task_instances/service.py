@@ -1,11 +1,10 @@
 from app.tasks.repository import TaskRepository
 from app.task_instances.repository import TaskInstanceRepository
 from app.task_schedules.repository import TaskScheduleRepository
-from app.task_instances.schemas import CompleteTaskInstanceRequest
 from app.task_instances.models import TaskInstance, TaskInstanceStatus
 from datetime import date
 
-from app.errors.exception import NotFoundError
+from app.shared.ownership import get_owned_task_or_raise, get_owned_task_schedule_or_raise, get_owned_task_instance_or_raise
 
 class TaskInstanceService:
   def __init__(self, task_instance_repo: TaskInstanceRepository, task_repo: TaskRepository,
@@ -15,8 +14,8 @@ class TaskInstanceService:
     self.task_schedule_repo = task_schedule_repo
 
   def create_task_instance(self, task_id, task_schedule_id, user_id):
-    task = self._get_owned_task_or_raise(task_id=task_id, user_id=user_id)
-    task_schedule = self._get_owned_task_schedule_or_raise(task_schedule_id=task_schedule_id, user_id=user_id)
+    task = get_owned_task_or_raise(self.task_repo, task_id=task_id, user_id=user_id)
+    task_schedule = get_owned_task_schedule_or_raise(self.task_schedule_repo, task_schedule_id=task_schedule_id, user_id=user_id)
 
     task_instance = TaskInstance(
       user_id = task.user_id,
@@ -41,7 +40,7 @@ class TaskInstanceService:
       user_id,
       completion_level: str
   ):
-    task_instance = self._get_owned_task_instance_or_raise(task_instance_id=task_instance_id, user_id=user_id)
+    task_instance = get_owned_task_instance_or_raise(self.task_instance_repo, task_instance_id=task_instance_id, user_id=user_id)
 
     snapshot = task_instance.scoring_snapshot_json or {}
     if completion_level not in snapshot:
@@ -63,22 +62,3 @@ class TaskInstanceService:
       "task_instance": updated_instance,
       "delta": delta
     }
-
-  def _get_owned_task_instance_or_raise(self, task_instance_id, user_id):
-    task_instance = self.task_instance_repo.get_task_instance_by_id_and_user_id(task_instance_id, user_id)
-    if not task_instance:
-      raise NotFoundError("Task Instance not found")
-    return task_instance
-
-
-  def _get_owned_task_schedule_or_raise(self, task_schedule_id, user_id):
-    task_schedule = self.task_schedule_repo.get_by_task_schedule_id_and_user_id(task_schedule_id, user_id)
-    if not task_schedule:
-      raise NotFoundError("Task Schedule not found")
-    return task_schedule
-
-  def _get_owned_task_or_raise(self, task_id, user_id):
-    task = self.task_repo.get_by_task_id_and_user_id(task_id, user_id)
-    if not task:
-      raise NotFoundError("Task not found")
-    return task
