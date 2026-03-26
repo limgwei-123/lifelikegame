@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
-from sqlalchemy import String, DateTime
+from sqlalchemy import String, DateTime, Integer
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -30,6 +30,12 @@ class User(Base):
     nullable=False
   )
 
+  current_value: Mapped[int] = mapped_column(
+    Integer,
+    default=0,
+    nullable=True
+  )
+
   timezone: Mapped[str] = mapped_column(
     String(64),
     default="Asia/Kuala_Lumpur"
@@ -44,3 +50,4 @@ class User(Base):
   tasks: Mapped[list["Task"]] = relationship("Task", back_populates="user")
   task_schedules: Mapped[list["TaskSchedule"]] = relationship("TaskSchedule", back_populates="user")
   task_instances: Mapped[list["TaskInstance"]] = relationship("TaskInstance", back_populates="user")
+  scoring_schemes: Mapped[list["ScoringScheme"]] = relationship("ScoringScheme", back_populates="user")

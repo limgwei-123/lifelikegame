@@ -3,6 +3,7 @@ from app.goals.repository import GoalRepository
 from app.tasks.repository import TaskRepository
 from app.task_schedules.repository import TaskScheduleRepository
 from app.task_instances.repository import TaskInstanceRepository
+from app.scoring_schemes.repository import ScoringSchemeRepository
 
 
 def get_owned_goal_or_raise(goal_repo:GoalRepository , goal_id, user_id):
@@ -31,4 +32,9 @@ def get_owned_task_instance_or_raise(task_instance_repo: TaskInstanceRepository,
     raise NotFoundError("Task Instance not found")
   return task_instance
 
+def get_owned_scoring_scheme_or_raise(scoring_scheme_repo: ScoringSchemeRepository, scoring_scheme_id, user_id):
+  scoring_scheme = scoring_scheme_repo.get_by_id_and_user_id(scoring_scheme_id=scoring_scheme_id, user_id=user_id)
+  if not scoring_scheme:
+    raise NotFoundError("Scoring Scheme not found")
+  return scoring_scheme
 

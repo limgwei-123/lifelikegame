@@ -24,7 +24,8 @@ def signup(payload: SignupRequest, auth_service: AuthServiceInterface = Depends(
 
   return UserMeResponse(
     id=str(user.id),
-    email=user.email
+    email=user.email,
+    current_value=0
   )
 
 @router.post("/login", response_model=TokenResponse)

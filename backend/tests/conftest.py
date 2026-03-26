@@ -133,3 +133,21 @@ def task_schedule(client, auth_headers,task):
     )
     assert res.status_code in (200, 201)
     return res.json()
+
+@pytest.fixture
+def scoring_scheme(client, auth_headers):
+    res = client.post(
+    "/scoring_schemes",
+    headers=auth_headers,
+    json={
+    "title": "normal",
+    "levels_json": {
+        "additionalProp1": 0,
+        "additionalProp2": 0,
+        "additionalProp3": 0
+    }
+    }
+    )
+
+    assert res.status_code in (200, 201)
+    return res.json()
