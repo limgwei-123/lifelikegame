@@ -113,9 +113,10 @@ checkins (用户“打卡行为记录”) （先跳过）
 scoring_schemes (一套“积分规则方案”，可给用户/任务套用)
 - id
 - user_id
-- title (默认：3/2/1)
+- title (默认：normal)
 - levels_json 例：{"perfect":3,"normal":2,"minimal":1,"none":0}
 - created_at
+- updated_at
 - deleted_at
 
 points_ledger (积分账本（加分/扣分的唯一真相来源）)
