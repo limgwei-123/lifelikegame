@@ -6,10 +6,10 @@ class UserService:
     self.user_repo = user_repo
 
   def get_user_by_email(self, email: str) -> User | None:
-    return self.user_repo.get_user_by_email(email)
+    return self.user_repo.get_by_email(email)
 
   def get_user_by_id(self, user_id: str) -> User | None:
-    return self.user_repo.get_user_by_id(user_id)
+    return self.user_repo.get_by_id(user_id)
 
 
   def create_user(self,email: str, password_hash: str) -> User:
@@ -17,4 +17,4 @@ class UserService:
       email = email,
       password_hash = password_hash
     )
-    return self.user_repo.create_user(user)
+    return self.user_repo.create(user)

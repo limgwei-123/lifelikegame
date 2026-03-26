@@ -9,10 +9,10 @@ class GoalService:
   def create_goal(self,user_id, payload:CreateGoalRequest):
     data = payload.model_dump()
     data['user_id'] = user_id
-    return self.goal_repo.create_goal(data)
+    return self.goal_repo.create(data)
 
   def list_goals(self, user_id):
-    return self.goal_repo.list_goals(user_id)
+    return self.goal_repo.list(user_id)
 
   def get_goal_by_id(self, goal_id, user_id):
     return get_owned_goal_or_raise(self.goal_repo,goal_id, user_id)
@@ -21,7 +21,7 @@ class GoalService:
   def update_goal(self, goal_id, user_id, data: UpdateGoalRequest):
     goal = get_owned_goal_or_raise(self.goal_repo,goal_id, user_id)
 
-    return self.goal_repo.update_goal(
+    return self.goal_repo.update(
       goal,
       data.model_dump(exclude_unset=True)
     )
@@ -29,4 +29,4 @@ class GoalService:
   def delete_goal(self, goal_id, user_id):
     goal = get_owned_goal_or_raise(self.goal_repo,goal_id, user_id)
 
-    self.goal_repo.delete_goal(goal)
+    self.goal_repo.delete(goal)

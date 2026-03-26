@@ -29,10 +29,10 @@ class TaskInstanceService:
       generated_reason= "Everyday Auto"
     )
 
-    return self.task_instance_repo.create_task_instance(task_instance)
+    return self.task_instance_repo.create(task_instance)
 
   def list_task_instances_by_date(self, user_id, date_instance: date):
-    return self.task_instance_repo.list_task_instances_by_user_id_and_date(user_id=user_id, date_instance = date_instance)
+    return self.task_instance_repo.list_by_user_id_and_date(user_id=user_id, date_instance = date_instance)
 
   def complete_task_instance(
       self,
@@ -54,7 +54,7 @@ class TaskInstanceService:
     task_instance.completion_level =completion_level
     task_instance.score_awarded = new_score
 
-    updated_instance = self.task_instance_repo.update_task_instance(
+    updated_instance = self.task_instance_repo.update(
       task_instance=task_instance
     )
 

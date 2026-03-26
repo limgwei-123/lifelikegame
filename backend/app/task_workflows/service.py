@@ -1,7 +1,6 @@
 from app.tasks.interfaces import TaskServiceInterface
 from app.task_schedules.interfaces import TaskScheduleServiceInterface
 
-from app.errors.exception import NotFoundError
 from app.tasks.schemas import CreateTaskRequest
 
 
