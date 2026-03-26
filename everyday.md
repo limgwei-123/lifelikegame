@@ -8,3 +8,4 @@
 2026/3/23: Build a simple use case(tomorrow need to add current value to user) (now still left scoring schemes, point ledger, reward, redemptions)
 2026/3/24: just make common function into single common file and call it
 2026/3/25: fever
+2026/3/25： done scoring schemes(left point ledger, reward, redemption), done refactor repo naming

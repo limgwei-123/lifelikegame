@@ -1,4 +1,4 @@
-- repo的naming要改的简洁一点
+- repo的naming要改的简洁一点 (done)
 - 未来要开dto
 - item pass进去repo最好是这样
 ✅ Router：用 schema 做 validation → 转成 DTO → 传给 service
