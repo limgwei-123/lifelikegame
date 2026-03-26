@@ -15,23 +15,23 @@ class TaskScheduleService:
     data = payload.model_dump()
     data['user_id'] = task.user_id
     data['task_id'] = task.id
-    return self.task_schedule_repo.create_task_schedule(data)
+    return self.task_schedule_repo.create(data)
 
   def list_task_schedules_by_task_id(self, task_id, user_id):
     task = get_owned_task_or_raise(self.task_repo,task_id = task_id, user_id = user_id)
-    return self.task_schedule_repo.list_task_schedules_by_task_id(task.id)
+    return self.task_schedule_repo.list_by_task_id(task.id)
 
   def list_task_schedules_by_user_id(self, user_id):
-    return self.task_schedule_repo.list_task_schedules_by_user_id(user_id)
+    return self.task_schedule_repo.list_by_user_id(user_id)
 
   def get_task_schedule_by_id(self, task_schedule_id, user_id):
     get_owned_task_schedule_or_raise(self.task_schedule_repo,task_schedule_id, user_id)
-    return self.task_schedule_repo.get_task_schedule_by_id(task_schedule_id)
+    return self.task_schedule_repo.get_by_id(task_schedule_id)
 
   def update_task_schedule(self, task_schedule_id, user_id, data: UpdateTaskScheduleRequest):
     task_schedule = get_owned_task_schedule_or_raise(self.task_schedule_repo,task_schedule_id, user_id)
 
-    return self.task_schedule_repo.update_task_schedule(
+    return self.task_schedule_repo.update(
       task_schedule,
       data.model_dump(exclude_unset=True)
     )
@@ -39,4 +39,4 @@ class TaskScheduleService:
   def delete_task_schedule(self, task_schedule_id, user_id):
     task_schedule = get_owned_task_schedule_or_raise(self.task_schedule_repo,task_schedule_id, user_id)
 
-    self.task_schedule_repo.delete_task_schedule(task_schedule)
+    self.task_schedule_repo.delete(task_schedule)
