@@ -1,7 +1,7 @@
 import uuid
-from datetime import datetime,date
+from datetime import datetime
 from typing import TYPE_CHECKING
-from sqlalchemy import ForeignKey, String, DateTime, Text, Boolean, JSON
+from sqlalchemy import ForeignKey, String, DateTime, Text, Boolean, JSON, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -39,8 +39,8 @@ class Task(Base):
    description: Mapped[str | None] = mapped_column(Text, nullable=True)
    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
-   scoring_scheme_id: Mapped[str | None] = mapped_column(
-        String,
+   scoring_scheme_id: Mapped[int | None] = mapped_column(
+       ForeignKey("scoring_schemes.id"),
         nullable=True,
     )
 
@@ -75,5 +75,10 @@ class Task(Base):
 
    goal: Mapped["Goal"] = relationship("Goal", back_populates="tasks")
    user: Mapped["User"] = relationship("User",back_populates="tasks")
+   scoring_scheme: Mapped["ScoringScheme | None"] = relationship(
+    "ScoringScheme",
+    back_populates="tasks"
+   )
+
    task_schedules: Mapped[list["TaskSchedule"]] = relationship("TaskSchedule", back_populates="task")
    task_instances: Mapped[list["TaskInstance"]] = relationship("TaskInstance", back_populates="task")

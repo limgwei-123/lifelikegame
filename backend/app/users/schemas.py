@@ -7,3 +7,4 @@ class UserMeResponse(BaseModel):
 
   id: uuid.UUID
   email: EmailStr
+  current_value: int
