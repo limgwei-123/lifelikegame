@@ -9,7 +9,7 @@ def test_create_point_ledger(client, auth_headers):
   "entry_type": "string",
   "source_type": "string",
   "source_id": 0,
-  "description": "string"
+  "description":"string"
 }
   )
 
