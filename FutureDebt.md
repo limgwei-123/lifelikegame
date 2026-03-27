@@ -1,6 +1,9 @@
 - repo的naming要改的简洁一点 (done)
-- 未来要开dto
-- item pass进去repo最好是这样
+1） get_by_id 可以不用，保留get by user_id就好
+
+2） 未来要开dto
+2） item pass进去repo最好是这样
+
 ✅ Router：用 schema 做 validation → 转成 DTO → 传给 service
 
 @router.post('/goals/{goal_id}/tasks')
@@ -41,3 +44,20 @@ task = Task(
 return self.task_repo.create(task)
 
 降低耦合性
+
+
+3） 未来不要call别人的repo，service 调对方 service interface会比较好（如果要call 对方的router，会在微服务里面），包括ownership也一样，不要call repo，让他们带service进来（只是用service interface来限制）例如：
+def get_owned_goal_or_raise(
+    goal_service: GoalServiceInterface,
+    goal_id: int,
+    user_id: str,
+):
+    goal = goal_service.get_by_id_and_user_id(goal_id, user_id)
+
+    if not goal:
+        raise NotFoundError("Goal not found")
+
+    return goal
+
+
+

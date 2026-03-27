@@ -51,3 +51,4 @@ class User(Base):
   task_schedules: Mapped[list["TaskSchedule"]] = relationship("TaskSchedule", back_populates="user")
   task_instances: Mapped[list["TaskInstance"]] = relationship("TaskInstance", back_populates="user")
   scoring_schemes: Mapped[list["ScoringScheme"]] = relationship("ScoringScheme", back_populates="user")
+  point_ledgers: Mapped[list["PointLedger"]] = relationship("PointLedger", back_populates="user")

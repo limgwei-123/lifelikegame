@@ -123,12 +123,13 @@ points_ledger (积分账本（加分/扣分的唯一真相来源）)
 UNIQUE(reason_type, reason_ref_id)
 - id
 - user_id
-- date_time
+- event_at
 - delta (+3 / -20)
-- reason_type (checkin / redeem)
-- reason_ref_id(关联 checkin 或 redemption)
-- balance_after (optional)
--created_at
+- entry_type ["earn", "spend"]
+- source_type ["checkin", "redemption", "manual"]
+- source_id
+- description
+- created_at
 
 6) 奖励与兑换（用户自定义
 rewards (用户自定义的“奖励清单”)
