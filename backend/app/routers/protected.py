@@ -8,6 +8,7 @@ from app.task_schedules.router import router as task_schedule_router
 from app.task_instances.router import router as task_instance_router
 from app.scoring_schemes.router import router as scoring_scheme_router
 from app.point_ledgers.router import router as point_ledger_router
+from app.rewards.router import router as reward_router
 
 router = APIRouter(
   dependencies=[Depends(get_current_user)]
@@ -20,3 +21,4 @@ router.include_router(task_schedule_router)
 router.include_router(task_instance_router)
 router.include_router(scoring_scheme_router)
 router.include_router(point_ledger_router)
+router.include_router(reward_router)
