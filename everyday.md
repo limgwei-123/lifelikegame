@@ -11,3 +11,4 @@
 2026/3/26： done scoring schemes(left point ledger, reward, redemption), done refactor repo naming
 2026/3/27: done point ledger (left reward, redemption), increase another future debt to change
 2026/3/31: fever still not well yet, tomorrow continue
+2026/4/2: complete reward, tomorrow continue redemption
