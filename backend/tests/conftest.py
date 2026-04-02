@@ -151,3 +151,17 @@ def scoring_scheme(client, auth_headers):
 
     assert res.status_code in (200, 201)
     return res.json()
+
+@pytest.fixture
+def reward(client, auth_headers):
+    res = client.post(
+    "/rewards",
+    headers=auth_headers,
+    json={
+    "title": "First Reward",
+    "cost_points": 2
+    }
+    )
+
+    assert res.status_code in (200, 201)
+    return res.json()
