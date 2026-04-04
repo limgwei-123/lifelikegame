@@ -141,12 +141,11 @@ rewards (用户自定义的“奖励清单”)
 - is_active
 - created_at
 
-redemptions (一次“兑换记录")
+redemptions
 - id
-- reward_id
 - user_id
-- redemeed_at
-- cost_points (冗余保存，防止 reward 后改价影响历史)
+- reward_id
+- points_spent
 - created_at
 
 7) RAG/Agent 的可追溯性
