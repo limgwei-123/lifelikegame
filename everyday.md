@@ -12,3 +12,4 @@
 2026/3/27: done point ledger (left reward, redemption), increase another future debt to change
 2026/3/31: fever still not well yet, tomorrow continue
 2026/4/2: complete reward, tomorrow continue redemption
+2026/4/5: 停了有点多天，接下来要开始做redemption和workflow了明天
