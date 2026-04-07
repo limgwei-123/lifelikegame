@@ -145,6 +145,7 @@ redemptions
 - id
 - user_id
 - reward_id
+- reward_snapshot_json
 - points_spent
 - created_at
 

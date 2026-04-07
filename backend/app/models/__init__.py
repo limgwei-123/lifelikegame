@@ -6,3 +6,4 @@ from app.task_instances.models import TaskInstance
 from app.scoring_schemes.models import ScoringScheme
 from app.point_ledgers.models import PointLedger
 from app.rewards.models import Reward
+from app.redemptions.models import Redemption

@@ -52,3 +52,4 @@ class Reward(Base):
   )
 
   user: Mapped["User"] = relationship("User", back_populates="rewards")
+  redemptions: Mapped[list["Redemption"]] = relationship("Redemption", back_populates="reward")

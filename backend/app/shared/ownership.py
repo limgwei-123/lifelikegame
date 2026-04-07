@@ -5,6 +5,7 @@ from app.task_schedules.repository import TaskScheduleRepository
 from app.task_instances.repository import TaskInstanceRepository
 from app.scoring_schemes.repository import ScoringSchemeRepository
 from app.rewards.repository import RewardRepository
+from app.redemptions.repository import RedemptionRepository
 
 
 def get_owned_goal_or_raise(goal_repo:GoalRepository , goal_id, user_id):
@@ -44,4 +45,10 @@ def get_owned_reward_or_raise(reward_repo: RewardRepository, reward_id, user_id)
   if not reward:
     raise NotFoundError("Reward not found")
   return reward
+
+def get_owned_redemption_or_raise(redemption_repo: RedemptionRepository, redemption_id, user_id):
+  redemption = redemption_repo.get_by_id_and_user_id(redemption_id=redemption_id, user_id=user_id)
+  if not redemption:
+    raise NotFoundError("Redemption not found")
+  return redemption
 
