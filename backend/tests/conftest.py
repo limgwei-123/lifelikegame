@@ -165,3 +165,17 @@ def reward(client, auth_headers):
 
     assert res.status_code in (200, 201)
     return res.json()
+
+
+@pytest.fixture
+def redemption(client, auth_headers,reward):
+    res = client.post(
+    "/redemptions",
+    headers=auth_headers,
+    json={
+    "reward_id": reward['id'],
+    }
+    )
+
+    assert res.status_code in (200, 201)
+    return res.json()
