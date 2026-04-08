@@ -1,13 +1,16 @@
-User Case 1:
-User 完成 TaskInstance
--> task instance update to complete
--> 根据complete 程度 计算分数
-->写入current value 和 point ledger 里面
+任务相关
+create task with schedule(done)
+complete task instance
+generate task instances for a date
+generate task instances for a date range
+积分相关
+get current points balance
+get points history
+奖励相关
+redeem reward
+list my redemption history
+目标相关
+get goal dashboard / progress summary
+例如一个 goal 下有多少 tasks、今天完成多少、累计 points 多少
 
-Use Case 2:
-TaskSchedule → 每天生成 TaskInstance
-
-Use Case 3:
-User 使用 points
-→ 创建 redemption
-→ 扣 points
+origin/feat/workflow
