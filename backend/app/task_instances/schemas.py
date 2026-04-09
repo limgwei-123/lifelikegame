@@ -12,6 +12,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.task_instances.models import TaskInstance, TaskInstanceStatus
 
 
+class CreateTaskInstanceRequest(BaseModel):
+    date_instance: date
 class TaskInstanceResponse(BaseModel):
     id: int
     user_id: uuid.UUID

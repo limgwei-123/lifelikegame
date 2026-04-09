@@ -13,7 +13,7 @@ class TaskInstanceService:
     self.task_repo = task_repo
     self.task_schedule_repo = task_schedule_repo
 
-  def create_task_instance(self, task_id, task_schedule_id, user_id):
+  def create_task_instance_for_date(self, task_id, task_schedule_id, user_id, payload):
     task = get_owned_task_or_raise(self.task_repo, task_id=task_id, user_id=user_id)
     task_schedule = get_owned_task_schedule_or_raise(self.task_schedule_repo, task_schedule_id=task_schedule_id, user_id=user_id)
 
@@ -21,7 +21,7 @@ class TaskInstanceService:
       user_id = task.user_id,
       task_schedule_id = task_schedule.id,
       task_id = task.id,
-      date_instance = date.today,
+      date_instance = payload.date_instance,
       status=TaskInstanceStatus.TODO.value,
       completion_level = None,
       score_awarded = 0,
