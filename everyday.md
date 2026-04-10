@@ -14,4 +14,4 @@
 2026/4/2: complete reward, tomorrow continue redemption
 2026/4/5: 停了有点多天，接下来要开始做redemption和workflow了明天
 2026/4/9: redemption已经做完了，现在workflow做好了create task with schedule，generate task_instance到一半现在
-2026/4/10: 今天忙学校的工作忙完了try
+2026/4/10: 今天忙学校的工作忙完了
