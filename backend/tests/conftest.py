@@ -117,7 +117,7 @@ def task(client, auth_headers,goal):
         headers=auth_headers,
     )
     assert res.status_code in (200, 201)
-    return res.json()['task']
+    return res.json()
 
 @pytest.fixture
 def task_schedule(client, auth_headers,task):

@@ -12,12 +12,14 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.task_instances.models import TaskInstance, TaskInstanceStatus
 
 
+class CreateTaskInstanceRequest(BaseModel):
+    date_instance: date
 class TaskInstanceResponse(BaseModel):
     id: int
     user_id: uuid.UUID
     task_id: int
     task_schedule_id: int | None
-    date: date
+    date_instance: date
     status: TaskInstanceStatus
     completion_level: str | None
     score_awarded: int

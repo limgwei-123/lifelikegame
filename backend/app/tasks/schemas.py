@@ -1,16 +1,14 @@
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
-from app.task_schedules.schemas import CreateTaskScheduleRequest
 import uuid
 
 class CreateTaskRequest(BaseModel):
   title: str
   description: str | None = None
   is_active: bool = True
-  scoring_scheme_id: str | None = None
+  scoring_scheme_id: int | None = None
   scoring_scheme_json: dict | None = None
   is_scoring_scheme_locked: bool = False
-  schedule: CreateTaskScheduleRequest | None = None
 
 class UpdateTaskRequest(BaseModel):
   title: str | None  = None
@@ -26,7 +24,7 @@ class TaskResponse(BaseModel):
   title: str
   description: str | None
   is_active: bool = True
-  scoring_scheme_id: str | None = None
+  scoring_scheme_id: int | None = None
   scoring_scheme_json: dict | None = None
   is_scoring_scheme_locked: bool = False
   created_at: datetime
