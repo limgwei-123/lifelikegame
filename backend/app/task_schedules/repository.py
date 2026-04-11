@@ -13,6 +13,9 @@ class TaskScheduleRepository:
     self.db.refresh(task_schedule)
     return task_schedule
 
+  def list_all(self):
+    return self.db.query(TaskSchedule).all()
+
   def list_by_task_id(self, task_id):
     return self.db.query(TaskSchedule).filter(TaskSchedule.task_id == task_id).order_by(TaskSchedule.created_at.asc()).all()
 

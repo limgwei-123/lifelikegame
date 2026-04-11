@@ -19,7 +19,7 @@ class TaskInstanceResponse(BaseModel):
     user_id: uuid.UUID
     task_id: int
     task_schedule_id: int | None
-    date: date
+    date_instance: date
     status: TaskInstanceStatus
     completion_level: str | None
     score_awarded: int

@@ -6,8 +6,7 @@ class TaskInstanceRepository:
   def __init__(self, db: Session):
     self.db = db
 
-  def create(self, data):
-    task_instance = TaskInstance(**data)
+  def create(self, task_instance: TaskInstance):
     self.db.add(task_instance)
     self.db.commit()
     self.db.refresh(task_instance)
@@ -18,6 +17,9 @@ class TaskInstanceRepository:
 
   def list_by_user_id(self, user_id):
     return self.db.query(TaskInstance).filter(TaskInstance.user_id == user_id).order_by(TaskInstance.created_at.asc()).all()
+
+  def get_by_task_id_and_date_instance(self, task_id, date_instance):
+    return self.db.query(TaskInstance).filter(TaskInstance.task_id == task_id, TaskInstance.date_instance == date_instance).first()
 
   def list_by_user_id_and_date(self, user_id, date_instance):
     return self.db.query(TaskInstance).filter(TaskInstance.user_id == user_id, TaskInstance.date_instance == date_instance).all()
