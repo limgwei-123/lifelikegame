@@ -1,9 +1,10 @@
 任务相关
 create task with schedule(done)
-complete task instance
-generate task instances for a date
-generate task instances for a date range
+complete task instance(done)
+generate task instances for a date(done)
+generate task instances for a date range(done)
 积分相关
+complete instances->complete → give points
 get current points balance
 get points history
 奖励相关
