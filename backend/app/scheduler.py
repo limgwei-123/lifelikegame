@@ -7,7 +7,7 @@ from app.db import SessionLocal
 from app.task_instances.interfaces import TaskInstanceServiceInterface
 from app.task_instances.dependencies import build_task_instance_service
 
-TIMEZONE = os.getenv("TIMEZONE")
+TIMEZONE = os.getenv("TIMEZONE","Asia/Kuala_Lumpur")
 
 scheduler = AsyncIOScheduler(timezone=ZoneInfo(TIMEZONE))
 
