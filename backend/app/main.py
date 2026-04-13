@@ -5,7 +5,18 @@ from app.routers.public import router as public_router
 from app.routers.protected import router as protected_router
 from app.errors.handlers import register_exception_handlers
 
-app = FastAPI()
+from contextlib import asynccontextmanager
+
+from app.scheduler import start_scheduler, stop_scheduler
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+  start_scheduler()
+  yield
+  stop_scheduler()
+
+app = FastAPI(lifespan=lifespan)
 
 register_exception_handlers(app)
 

@@ -23,12 +23,16 @@ def get_task_schedule_repository(
 )->TaskScheduleRepository:
   return TaskScheduleRepository(db)
 
+
+def build_task_instance_service(db: Session) -> TaskInstanceServiceInterface:
+    return TaskInstanceService(
+        task_repo=TaskRepository(db),
+        task_schedule_repo=TaskScheduleRepository(db),
+        task_instance_repo=TaskInstanceRepository(db),
+    )
+
+
 def get_task_instance_service(
-    task_repo: TaskRepository = Depends(get_task_repository),
-    task_schedule_repo: TaskScheduleRepository = Depends(get_task_schedule_repository),
-    task_instance_repo: TaskInstanceRepository = Depends(get_task_instance_repository)
+    db: Session = Depends(get_db),
 )->TaskInstanceServiceInterface:
-  return TaskInstanceService(
-    task_repo=task_repo,
-    task_instance_repo=task_instance_repo,
-    task_schedule_repo = task_schedule_repo)
+  return build_task_instance_service(db)
