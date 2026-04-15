@@ -3,18 +3,12 @@ from datetime import datetime,date
 from typing import TYPE_CHECKING
 from sqlalchemy import ForeignKey, String, DateTime, Text, Enum, JSON, Date
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-import enum
+from app.shared.enums import ScheduleType
 
 from app.db import Base
 
 if TYPE_CHECKING:
   from app.models import *
-
-class ScheduleType(str, enum.Enum):
-  DAILY = "daily"
-  WEEKLY = "weekly"
-  MONTHLY = "monthly"
-  ONCE = "once"
 
 class TaskSchedule(Base):
   __tablename__ = "task_schedules"

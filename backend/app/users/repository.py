@@ -17,6 +17,20 @@ class UserRepository:
     def get_by_id(self, user_id: str) -> User | None:
         return self.db.get(User, user_id)
 
+    def update_user_point(self, user_id, delta):
+        self.db.query(User).filter(User.id == user_id).update(
+        {User.current_value: User.current_value + delta}
+        )
+        self.db.commit()
+        user = self.db.query(User).filter(User.id == user_id).first()
+        return user
+
+    def update(self, user: User):
+        self.db.add(user)
+        self.db.commit()
+        self.db.refresh(user)
+        return user
+
     def create(self, user: User) -> User:
         self.db.add(user)
         self.db.commit()
