@@ -20,7 +20,7 @@ def create_scoring_scheme(payload: CreateScoringSchemeRequest, current_user = De
 
 @router.get('/{scoring_scheme_id}')
 def get_scoring_scheme_by_id(scoring_scheme_id, current_user = Depends(get_current_user), scoring_scheme_service: ScoringSchemeServiceInterface = Depends(get_scoring_scheme_service)):
-  return scoring_scheme_service.get_scoring_scheme_by_id(scoring_scheme_id=scoring_scheme_id, user_id= current_user.id)
+  return scoring_scheme_service.get_scoring_scheme_by_user_id_and_id(scoring_scheme_id=scoring_scheme_id, user_id= current_user.id)
 
 @router.get('')
 def list_scoring_schemes_by_user_id(current_user = Depends(get_current_user), scoring_scheme_service: ScoringSchemeServiceInterface = Depends(get_scoring_scheme_service)):

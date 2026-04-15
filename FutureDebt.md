@@ -1,5 +1,5 @@
 - repo的naming要改的简洁一点 (done)
-1） get_by_id 可以不用，保留get by user_id就好
+1） get_by_id 和 get by user_id 和 id都要保留
 
 2） 未来要开dto
 2） item pass进去repo最好是这样
@@ -60,6 +60,10 @@ def get_owned_goal_or_raise(
     return goal
 
 4) 在workflow里面可以做成未来确保全部跑到了一次过commit（目前是分开可能遇到task create了，schedule没有create的问题）
+
+5）要把dependencies部分改成build 和 get，只留depends在router
+
+5)那些model dump都要改掉，变成router就会给所有资料转成dto,然后不可以在service看到schemas这些字眼，最多dto
 
 
 

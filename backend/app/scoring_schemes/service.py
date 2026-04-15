@@ -14,7 +14,11 @@ class ScoringSchemeService:
   def list_scoring_schemes_by_user_id(self, user_id):
     return self.scoring_scheme_repo.list_by_user_id(user_id=user_id)
 
-  def get_scoring_scheme_by_id(self, scoring_scheme_id, user_id):
+  def get_scoring_scheme_by_id(self, scoring_scheme_id):
+    scoring_scheme = self.scoring_scheme_repo.get_by_id(scoring_scheme_id=scoring_scheme_id)
+    return scoring_scheme
+
+  def get_scoring_scheme_by_user_id_and_id(self, scoring_scheme_id, user_id):
     scoring_scheme = get_owned_scoring_scheme_or_raise(self.scoring_scheme_repo,scoring_scheme_id=scoring_scheme_id, user_id=user_id)
     return scoring_scheme
 

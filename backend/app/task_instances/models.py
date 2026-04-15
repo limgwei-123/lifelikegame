@@ -4,16 +4,10 @@ from typing import TYPE_CHECKING
 from sqlalchemy import ForeignKey, DateTime, Date, String, Integer, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db import Base
-from enum import StrEnum
+from app.shared.enums import TaskInstanceStatus
 
 if TYPE_CHECKING:
   from app.models import *
-
-
-class TaskInstanceStatus(StrEnum):
-  TODO = "todo"
-  DONE = "done"
-  SKIPPED = "skipped"
 
 class TaskInstance(Base):
   __tablename__ = "task_instances"

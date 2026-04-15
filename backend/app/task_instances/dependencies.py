@@ -6,29 +6,22 @@ from app.task_instances.interfaces import TaskInstanceServiceInterface
 from app.task_instances.repository import TaskInstanceRepository
 from app.tasks.repository import TaskRepository
 from app.task_schedules.repository import TaskScheduleRepository
+from app.point_ledgers.interfaces import PointLedgerServiceInterface
+
 from app.task_instances.service import TaskInstanceService
 
-def get_task_instance_repository(
-    db: Session = Depends(get_db)
-)->TaskInstanceRepository:
-  return TaskInstanceRepository(db)
-
-def get_task_repository(
-    db:Session = Depends(get_db)
-)->TaskRepository:
-  return TaskRepository(db)
-
-def get_task_schedule_repository(
-    db:Session = Depends(get_db)
-)->TaskScheduleRepository:
-  return TaskScheduleRepository(db)
+from app.point_ledgers.dependencies import build_point_ledger_service
+from app.users.dependencies import build_user_service
 
 
 def build_task_instance_service(db: Session) -> TaskInstanceServiceInterface:
+
     return TaskInstanceService(
         task_repo=TaskRepository(db),
         task_schedule_repo=TaskScheduleRepository(db),
         task_instance_repo=TaskInstanceRepository(db),
+        point_ledger_service=build_point_ledger_service(db),
+        user_service=build_user_service(db)
     )
 
 

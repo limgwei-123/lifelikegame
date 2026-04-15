@@ -3,7 +3,6 @@ from datetime import datetime,date
 import uuid
 
 class CreatePointLedgerRequest(BaseModel):
-    event_at: date
     delta: int
     entry_type: str
     source_type: str | None = None

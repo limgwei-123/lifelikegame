@@ -2,21 +2,33 @@ from app.tasks.interfaces import TaskServiceInterface
 from app.task_schedules.interfaces import TaskScheduleServiceInterface
 from app.goals.interfaces import GoalServiceInterface
 from app.task_instances.interfaces import TaskInstanceServiceInterface
+from app.scoring_schemes.interfaces import ScoringSchemeServiceInterface
 
 from app.workflows.schemas import CreateTaskWithScheduleRequest, TaskWithScheduleResponse
 
+from app.shared.default import SCORING_SCHME_ID
+
 class WorkflowService:
-  def __init__(self, goal_service: GoalServiceInterface, task_service: TaskServiceInterface, task_schedule_service: TaskScheduleServiceInterface, task_instance_service: TaskInstanceServiceInterface):
+  def __init__(self, goal_service: GoalServiceInterface, task_service: TaskServiceInterface, task_schedule_service: TaskScheduleServiceInterface, task_instance_service: TaskInstanceServiceInterface,scoring_scheme_service: ScoringSchemeServiceInterface):
     self.goal_service = goal_service
     self.task_service = task_service
     self.task_schedule_service = task_schedule_service
     self.task_instance_service = task_instance_service
+    self.scoring_scheme_service = scoring_scheme_service
 
   def create_task_with_schedule(self, goal_id, user_id, payload: CreateTaskWithScheduleRequest):
+
+    scoring_scheme = self.scoring_scheme_service.get_scoring_scheme_by_id(payload.task.scoring_scheme_id)
+    if not scoring_scheme:
+      scoring_scheme = self.scoring_scheme_service.get_scoring_scheme_by_id(scoring_scheme_id=SCORING_SCHME_ID.DEFAULT)
+
+    payload.task.scoring_scheme_id = scoring_scheme.id
+    payload.task.scoring_scheme_json = scoring_scheme.levels_json
+
     task = self.task_service.create_task(
       goal_id=goal_id,
       user_id=user_id,
-      payload=payload.task
+      payload=payload.task,
       )
 
     schedule = None

@@ -7,7 +7,10 @@ class ScoringSchemeServiceInterface(Protocol):
   def list_scoring_schemes_by_user_id(self, user_id):
     ...
 
-  def get_scoring_scheme_by_id(self, scoring_scheme_id, user_id):
+  def get_scoring_scheme_by_user_id_and_id(self, scoring_scheme_id, user_id):
+    ...
+
+  def get_scoring_scheme_by_id(self, scoring_scheme_id):
     ...
 
   def update_scoring_scheme(self, scoring_scheme_id, user_id, data):

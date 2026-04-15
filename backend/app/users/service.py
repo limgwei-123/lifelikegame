@@ -11,6 +11,9 @@ class UserService:
   def get_user_by_id(self, user_id: str) -> User | None:
     return self.user_repo.get_by_id(user_id)
 
+  def update_user_point(self, user_id,delta):
+    return self.user_repo.update_user_point(user_id=user_id, delta=delta)
+
 
   def create_user(self,email: str, password_hash: str) -> User:
     user = User(
