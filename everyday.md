@@ -18,3 +18,6 @@
 2026/4/11: Completed generate task instance with date, tomorrow go to play, next day working on cron
 2026/4/13: Completed cron, continue on complete instance tomorrow
 2026/4/14： lazy one day
+2026/4/15: complete task instance, now need to refactor code
+1. (set all into build and get in dependencies), only router and use get,others all use build
+2. need to change current model.dump, into dto is better, it easier for make changes
