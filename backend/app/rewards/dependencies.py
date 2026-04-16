@@ -6,10 +6,11 @@ from app.rewards.interfaces import RewardServiceInterface
 from app.rewards.repository import RewardRepository
 from app.rewards.service import RewardService
 
-def get_reward_repository(db: Session = Depends(get_db))->RewardRepository:
-  return RewardRepository(db)
 
-def get_reward_service(reward_repo: RewardRepository = Depends(get_reward_repository))->RewardServiceInterface:
+def build_reward_service(db: Session)->RewardServiceInterface:
   return RewardService(
-    reward_repo=reward_repo
+    reward_repo=RewardRepository(db)
   )
+
+def get_reward_service(db:Session = Depends(get_db))->RewardServiceInterface:
+  return build_reward_service(db)

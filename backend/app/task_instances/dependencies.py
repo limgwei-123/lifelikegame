@@ -6,7 +6,6 @@ from app.task_instances.interfaces import TaskInstanceServiceInterface
 from app.task_instances.repository import TaskInstanceRepository
 from app.tasks.repository import TaskRepository
 from app.task_schedules.repository import TaskScheduleRepository
-from app.point_ledgers.interfaces import PointLedgerServiceInterface
 
 from app.task_instances.service import TaskInstanceService
 

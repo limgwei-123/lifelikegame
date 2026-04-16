@@ -1,23 +1,24 @@
-from app.tasks.dependencies import get_task_service
-from app.task_schedules.dependencies import get_task_schedule_service
-from app.goals.dependencies import get_goal_service
-from app.task_instances.dependencies import get_task_instance_service
-from app.scoring_schemes.dependencies import get_scoring_scheme_service
+from app.tasks.dependencies import build_task_service
+from app.task_schedules.dependencies import build_task_schedule_service
+from app.goals.dependencies import build_goal_service
+from app.task_instances.dependencies import build_task_instance_service
+from app.scoring_schemes.dependencies import build_scoring_scheme_service
 from app.workflows.interfaces import WorkflowServiceInterface
 from app.workflows.service import WorkflowService
 from fastapi import Depends
+from sqlalchemy.orm import Session
+from app.db import get_db
+
+def build_workflow_service(db: Session)-> WorkflowServiceInterface:
+  return WorkflowService(
+    task_service= build_task_service(db),
+    task_schedule_service= build_task_schedule_service(db),
+    goal_service = build_goal_service(db),
+    task_instance_service = build_task_instance_service(db),
+    scoring_scheme_service=build_scoring_scheme_service
+  )
 
 def get_workflow_service(
-    task_service = Depends(get_task_service),
-    task_schedule_service = Depends(get_task_schedule_service),
-    goal_service = Depends(get_goal_service),
-    task_instance_service = Depends(get_task_instance_service),
-    scoring_scheme_service = Depends(get_scoring_scheme_service)
+    db: Session = Depends(get_db),
 ) -> WorkflowServiceInterface:
-  return WorkflowService(
-    task_service= task_service,
-    task_schedule_service= task_schedule_service,
-    goal_service = goal_service,
-    task_instance_service = task_instance_service,
-    scoring_scheme_service=scoring_scheme_service
-  )
+    return build_workflow_service(db)

@@ -7,18 +7,13 @@ from app.tasks.repository import TaskRepository
 from app.goals.repository import GoalRepository
 from app.tasks.service import TaskService
 
-def get_task_repository(
-    db: Session = Depends(get_db)
-)->TaskRepository:
-  return TaskRepository(db)
-
-def get_goal_repository(
-    db: Session = Depends(get_db)
-)-> GoalRepository:
-  return GoalRepository(db)
+def build_task_service(db:Session)->TaskServiceInterface:
+  return TaskService(
+    goal_repo=GoalRepository(db),
+    task_repo=TaskRepository(db)
+    )
 
 def get_task_service(
-    task_repo: TaskRepository = Depends (get_task_repository),
-    goal_repo: GoalRepository = Depends (get_goal_repository)
+    db: Session = Depends(get_db)
 )->TaskServiceInterface:
-  return TaskService(goal_repo=goal_repo, task_repo=task_repo)
+  return build_task_service(db)

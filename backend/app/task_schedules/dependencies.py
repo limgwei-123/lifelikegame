@@ -7,18 +7,13 @@ from app.task_schedules.repository import TaskScheduleRepository
 from app.tasks.repository import TaskRepository
 from app.task_schedules.service import TaskScheduleService
 
-def get_task_schedule_repository(
-    db: Session = Depends(get_db)
-)->TaskScheduleRepository:
-  return TaskScheduleRepository(db)
-
-def get_task_repository(
-    db: Session = Depends(get_db)
-)-> TaskRepository:
-  return TaskRepository(db)
+def build_task_schedule_service(db: Session)->TaskScheduleServiceInterface:
+  return TaskScheduleService(
+    task_repo=TaskRepository(db),
+    task_schedule_repo=TaskScheduleRepository(db)
+  )
 
 def get_task_schedule_service(
-    task_schedule_repo: TaskScheduleRepository = Depends (get_task_schedule_repository),
-    task_repo: TaskRepository = Depends (get_task_repository)
+    db: Session = Depends(get_db)
 )->TaskScheduleServiceInterface:
-  return TaskScheduleService(task_schedule_repo=task_schedule_repo, task_repo=task_repo)
+  return build_task_schedule_service(db)
