@@ -52,7 +52,7 @@ class Task(Base):
    is_scoring_scheme_locked: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,
-        default=False,
+        default=True,
     )
 
 

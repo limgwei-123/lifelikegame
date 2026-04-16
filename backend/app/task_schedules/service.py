@@ -5,7 +5,7 @@ from app.task_schedules.schemas import WeeklyValue, MonthlyValue
 from app.task_schedules.models import ScheduleType
 
 from app.shared.ownership import get_owned_task_or_raise, get_owned_task_schedule_or_raise
-
+from app.task_schedules.models import TaskSchedule
 class TaskScheduleService:
   def __init__(self, task_schedule_repo: TaskScheduleRepository, task_repo: TaskRepository):
     self.task_schedule_repo = task_schedule_repo
@@ -14,16 +14,22 @@ class TaskScheduleService:
 
   def create_task_schedule(self, task_id, user_id, payload: CreateTaskScheduleRequest):
     task = get_owned_task_or_raise(self.task_repo, task_id, user_id)
-    data = payload.model_dump()
-    data['user_id'] = task.user_id
-    data['task_id'] = task.id
 
     self._validate_schedule_value(
     schedule_type=payload.schedule_type,
     schedule_value_json=payload.schedule_value_json,
     )
 
-    return self.task_schedule_repo.create(data)
+    task_schedule = TaskSchedule(
+      user_id = user_id,
+      task_id = task.id,
+      schedule_type= payload.schedule_type,
+      schedule_value_json= payload.schedule_value_json,
+      start_date= payload.start_date,
+      end_date= payload.end_date
+    )
+
+    return self.task_schedule_repo.create(task_schedule)
 
   def list_all_task_schedules(self):
     return self.task_schedule_repo.list_all()
@@ -47,10 +53,13 @@ class TaskScheduleService:
     schedule_value_json=data.schedule_value_json,
     )
 
+    update_task_schedule = data.model_dump(exclude_unset=True)
+
+    for field, value in update_task_schedule.items():
+        setattr(task_schedule, field, value)
 
     return self.task_schedule_repo.update(
-      task_schedule,
-      data.model_dump(exclude_unset=True)
+      task_schedule
     )
 
   def delete_task_schedule(self, task_schedule_id, user_id):

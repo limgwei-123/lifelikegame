@@ -9,10 +9,18 @@ class PointLedgerService:
     self.point_ledger_repo = point_ledger_repo
 
   def create_point_ledger(self, user_id, payload: CreatePointLedgerRequest):
-    data = payload.model_dump()
-    data['user_id'] = user_id
-    data['event_at'] = date.today()
-    return self.point_ledger_repo.create(data=data)
+
+    point_ledger = PointLedger(
+       delta=payload.delta,
+       entry_type=payload.entry_type,
+       source_type=payload.source_type,
+       source_id=payload.source_id,
+       description=payload.description,
+       user_id=user_id,
+       event_at=date.today()
+    )
+
+    return self.point_ledger_repo.create(point_ledger)
 
   def list_point_ledgers_by_user_id(self, user_id):
     return self.point_ledger_repo.list_by_user_id(user_id=user_id)

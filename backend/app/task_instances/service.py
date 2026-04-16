@@ -12,6 +12,7 @@ from app.task_schedules.models import ScheduleType
 from app.shared.ownership import get_owned_task_or_raise, get_owned_task_schedule_or_raise, get_owned_task_instance_or_raise
 from app.shared.enums import EntryType
 from app.point_ledgers.schemas import CreatePointLedgerRequest
+from app.task_instances.schemas import CompleteTaskInstanceResponse,TaskInstanceResponse
 
 class TaskInstanceService:
   def __init__(self, task_instance_repo: TaskInstanceRepository, task_repo: TaskRepository,
@@ -89,7 +90,7 @@ class TaskInstanceService:
     )
 
 
-    payload = CreatePointLedgerRequest(
+    point_ledger_request = CreatePointLedgerRequest(
       delta=delta,
       entry_type=EntryType.EARN,
       source_type='task_instance',
@@ -98,13 +99,18 @@ class TaskInstanceService:
     )
 
 
-    self.point_ledger_service.create_point_ledger(
+    point_ledger = self.point_ledger_service.create_point_ledger(
       user_id=user_id,
-      payload=payload
+      payload=point_ledger_request
     )
 
     user = self.user_service.update_user_point(user_id=user_id, delta=delta)
-    return updated_instance
+
+    return CompleteTaskInstanceResponse(
+      task_instance=updated_instance,
+      user=user,
+      point_ledger=point_ledger
+    )
 
 
   def _create_task_instance(self, task, task_schedule, date_instance):

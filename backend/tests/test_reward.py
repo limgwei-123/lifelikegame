@@ -10,7 +10,6 @@ def test_create_reward(client, auth_headers):
     )
 
   assert reward_response.status_code in (200, 201)
-  return reward_response.json()
 
 def test_list_rewards_by_user_id(client, auth_headers):
   rewards_response = client.get(

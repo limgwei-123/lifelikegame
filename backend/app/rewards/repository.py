@@ -6,8 +6,7 @@ class RewardRepository:
   def __init__(self, db:Session):
     self.db = db
 
-  def create(self, data):
-    reward = Reward(**data)
+  def create(self, reward: Reward):
     self.db.add(reward)
     self.db.commit()
     self.db.refresh(reward)
@@ -19,9 +18,7 @@ class RewardRepository:
   def get_by_id_and_user_id(self, reward_id, user_id):
     return self.db.query(Reward).filter(Reward.id == reward_id, Reward.user_id == user_id).first()
 
-  def update(self, reward: Reward, data: dict):
-    for key, value in data.items():
-      setattr(reward, key, value)
+  def update(self, reward: Reward):
 
     self.db.commit()
     self.db.refresh(reward)

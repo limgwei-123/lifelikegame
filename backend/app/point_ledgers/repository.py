@@ -6,8 +6,8 @@ class PointLedgerRepository:
   def __init__(self, db:Session):
     self.db = db
 
-  def create(self, data):
-    point_ledger = PointLedger(**data)
+  def create(self, point_ledger: PointLedger):
+
     self.db.add(point_ledger)
     self.db.commit()
     self.db.refresh(point_ledger)
