@@ -21,3 +21,4 @@
 2026/4/15: complete task instance, now need to refactor code
 1. (set all into build and get in dependencies), only router and use get,others all use build
 2. need to change current model.dump, into dto is better, it easier for make changes
+2026/4/16： complete refractor, continue for redeem reward

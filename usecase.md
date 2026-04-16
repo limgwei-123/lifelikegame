@@ -4,9 +4,9 @@ complete task instance(done)
 generate task instances for a date(done)
 generate task instances for a date range(done)
 积分相关
-complete instances->complete → give points
-get current points balance
-get points history
+complete instances->complete → give points (done)
+get current points balance (done)
+get points history (done)
 奖励相关
 redeem reward
 list my redemption history

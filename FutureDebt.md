@@ -63,7 +63,7 @@ def get_owned_goal_or_raise(
 
 5）要把dependencies部分改成build 和 get，只留depends在router(done)
 
-6)那些model dump都要改掉，变成router就会给所有资料转成dto,然后不可以在service看到schemas这些字眼，最多dto
+6)那些model dump都要改掉，变成router就会给所有资料转成dto,然后不可以在service看到schemas这些字眼，最多dto（model dump拿掉了，只是没有用dto，用的service 那里create）
 
 
 
