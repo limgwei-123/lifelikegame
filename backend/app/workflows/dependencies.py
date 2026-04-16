@@ -15,7 +15,7 @@ def build_workflow_service(db: Session)-> WorkflowServiceInterface:
     task_schedule_service= build_task_schedule_service(db),
     goal_service = build_goal_service(db),
     task_instance_service = build_task_instance_service(db),
-    scoring_scheme_service=build_scoring_scheme_service
+    scoring_scheme_service=build_scoring_scheme_service(db)
   )
 
 def get_workflow_service(

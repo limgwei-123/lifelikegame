@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, status, Query
 
 from app.auth.dependencies import get_current_user
-from app.task_instances.schemas import TaskInstanceResponse, CompleteTaskInstanceRequest, CreateTaskInstanceRequest
+from app.task_instances.schemas import TaskInstanceResponse, CompleteTaskInstanceRequest, CreateTaskInstanceRequest,CompleteTaskInstanceResponse
 
 from app.task_instances.interfaces import TaskInstanceServiceInterface
 from app.task_instances.dependencies import get_task_instance_service
@@ -25,13 +25,13 @@ def create_task_instance_for_date(task_id,task_schedule_id, payload: CreateTaskI
 
 @router.post("/tasks_instances/generate", response_model=list[TaskInstanceResponse], status_code=status.HTTP_201_CREATED)
 def generate_task_instances_for_date(
-  date:date,
+  payload: CreateTaskInstanceRequest,
   task_instance_service: TaskInstanceServiceInterface = Depends(get_task_instance_service)
 ):
-  return task_instance_service.generate_task_instances_for_date(target_date=date)
+  return task_instance_service.generate_task_instances_for_date(target_date=payload.date_instance)
 
 
-@router.post("/task_instances/{task_instance_id}/complete", response_model=TaskInstanceResponse, status_code=status.HTTP_200_OK)
+@router.post("/task_instances/{task_instance_id}/complete", response_model=CompleteTaskInstanceResponse, status_code=status.HTTP_200_OK)
 def complete_task_instance(task_instance_id, payload: CompleteTaskInstanceRequest, current_user = Depends(get_current_user), task_instance_service:TaskInstanceServiceInterface = Depends(get_task_instance_service)):
   task_instance = task_instance_service.complete_task_instance(task_instance_id=task_instance_id, user_id= current_user.id, completion_level= payload.completion_level)
   return task_instance

@@ -6,8 +6,7 @@ class TaskRepository:
   def __init__(self, db: Session):
     self.db = db
 
-  def create(self, data):
-    task = Task(**data)
+  def create(self, task: Task):
     self.db.add(task)
     self.db.commit()
     self.db.refresh(task)
@@ -25,10 +24,7 @@ class TaskRepository:
   def get_by_id_and_user_id(self, task_id, user_id):
     return self.db.query(Task).filter(Task.id == task_id, Task.user_id == user_id).first()
 
-  def update(self, task: Task, data: dict) -> Task:
-    for key, value in data.items():
-      setattr(task, key, value)
-
+  def update(self, task: Task) -> Task:
     self.db.commit()
     self.db.refresh(task)
     return task

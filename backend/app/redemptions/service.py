@@ -3,6 +3,7 @@ from app.redemptions.schemas import CreateRedemptionRequest
 from app.shared.ownership import get_owned_redemption_or_raise, get_owned_reward_or_raise
 
 from app.rewards.repository import RewardRepository
+from app.redemptions.models import Redemption
 
 class RedemptionService:
   def __init__(self, redemption_repo: RedemptionRepository, reward_repo: RewardRepository):
@@ -10,23 +11,23 @@ class RedemptionService:
     self.reward_repo = reward_repo
 
   def create_redemption(self, user_id, payload: CreateRedemptionRequest):
-    data = payload.model_dump()
-    data['user_id'] = user_id
 
-    reward = get_owned_reward_or_raise(reward_repo= self.reward_repo, reward_id=data['reward_id'] , user_id=user_id)
+    reward = get_owned_reward_or_raise(reward_repo= self.reward_repo, reward_id=payload.reward_id , user_id=user_id)
 
-    data['cost_points'] = reward.cost_points
-
-    reward_snapshot = {
+    reward_snapshot_json = {
     "id": reward.id,
     "title": reward.title,
     "description": reward.description,
     "cost_points": reward.cost_points,
     }
-    data['reward_snapshot_json'] = reward_snapshot
-    data['reward_id'] = reward.id
 
-    return self.redemption_repo.create(data)
+    redemption = Redemption(
+      reward_id = reward.id,
+      reward_snapshot_json = reward_snapshot_json,
+      cost_points = reward.cost_points,
+      user_id = user_id
+    )
+    return self.redemption_repo.create(redemption)
 
   def list_redemptions_by_user_id(self, user_id):
     return self.redemption_repo.list_by_user_id(user_id=user_id)

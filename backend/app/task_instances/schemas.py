@@ -2,14 +2,15 @@ from pydantic import BaseModel, ConfigDict
 from datetime import date, datetime
 import uuid
 from typing import Any
-from app.task_instances.models import TaskInstance
+from app.users.schemas import UserMeResponse
+from app.point_ledgers.schemas import PointLedgerResponse
 
 from datetime import date, datetime
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.task_instances.models import TaskInstance, TaskInstanceStatus
+from app.shared.enums import TaskInstanceStatus
 
 
 class CreateTaskInstanceRequest(BaseModel):
@@ -23,7 +24,7 @@ class TaskInstanceResponse(BaseModel):
     status: TaskInstanceStatus
     completion_level: str | None
     score_awarded: int
-    scoring_snapshot_json: dict[str, Any]
+    scoring_snapshot_json: dict[str, Any] | None = None
     generated_reason: str | None
     created_at: datetime
     updated_at: datetime
@@ -31,6 +32,9 @@ class TaskInstanceResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-
+class CompleteTaskInstanceResponse(BaseModel):
+    task_instance: TaskInstanceResponse
+    user: UserMeResponse
+    point_ledger: PointLedgerResponse
 class CompleteTaskInstanceRequest(BaseModel):
     completion_level: str = Field(min_length=1, max_length=100)

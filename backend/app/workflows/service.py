@@ -6,7 +6,7 @@ from app.scoring_schemes.interfaces import ScoringSchemeServiceInterface
 
 from app.workflows.schemas import CreateTaskWithScheduleRequest, TaskWithScheduleResponse
 
-from app.shared.default import SCORING_SCHME_ID
+from app.shared.function import get_scoring_scheme_workflow
 
 class WorkflowService:
   def __init__(self, goal_service: GoalServiceInterface, task_service: TaskServiceInterface, task_schedule_service: TaskScheduleServiceInterface, task_instance_service: TaskInstanceServiceInterface,scoring_scheme_service: ScoringSchemeServiceInterface):
@@ -18,9 +18,7 @@ class WorkflowService:
 
   def create_task_with_schedule(self, goal_id, user_id, payload: CreateTaskWithScheduleRequest):
 
-    scoring_scheme = self.scoring_scheme_service.get_scoring_scheme_by_id(payload.task.scoring_scheme_id)
-    if not scoring_scheme:
-      scoring_scheme = self.scoring_scheme_service.get_scoring_scheme_by_id(scoring_scheme_id=SCORING_SCHME_ID.DEFAULT)
+    scoring_scheme = get_scoring_scheme_workflow(scoring_scheme_id=payload.task.scoring_scheme_id,scoring_scheme_service=self.scoring_scheme_service)
 
     payload.task.scoring_scheme_id = scoring_scheme.id
     payload.task.scoring_scheme_json = scoring_scheme.levels_json

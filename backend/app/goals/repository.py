@@ -5,8 +5,7 @@ class GoalRepository:
   def __init__(self, db: Session):
     self.db = db
 
-  def create(self, data):
-    goal = Goal(**data)
+  def create(self, goal: Goal):
     self.db.add(goal)
     self.db.commit()
     self.db.refresh(goal)
@@ -21,10 +20,7 @@ class GoalRepository:
   def get_by_id_and_user_id(self, goal_id, user_id):
     return self.db.query(Goal).filter(Goal.id == goal_id, Goal.user_id == user_id).first()
 
-  def update(self, goal: Goal, data: dict) -> Goal:
-    for key, value in data.items():
-      setattr(goal, key, value)
-
+  def update(self, goal: Goal) -> Goal:
     self.db.commit()
     self.db.refresh(goal)
     return goal

@@ -6,8 +6,7 @@ class TaskScheduleRepository:
   def __init__(self, db: Session):
     self.db = db
 
-  def create(self, data):
-    task_schedule = TaskSchedule(**data)
+  def create(self, task_schedule:TaskSchedule):
     self.db.add(task_schedule)
     self.db.commit()
     self.db.refresh(task_schedule)
@@ -28,10 +27,7 @@ class TaskScheduleRepository:
   def get_by_id_and_user_id(self, task_schedule_id, user_id):
     return self.db.query(TaskSchedule).filter(TaskSchedule.id == task_schedule_id, TaskSchedule.user_id == user_id).first()
 
-  def update(self, task_schedule: TaskSchedule, data: dict) -> TaskSchedule:
-    for key, value in data.items():
-      setattr(task_schedule, key, value)
-
+  def update(self, task_schedule: TaskSchedule) -> TaskSchedule:
     self.db.commit()
     self.db.refresh(task_schedule)
     return task_schedule

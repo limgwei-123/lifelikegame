@@ -5,8 +5,7 @@ class RedemptionRepository:
   def __init__(self, db: Session):
     self.db = db
 
-  def create(self, data):
-    redemption = Redemption(**data)
+  def create(self, redemption: Redemption):
     self.db.add(redemption)
     self.db.commit()
     self.db.refresh(redemption)

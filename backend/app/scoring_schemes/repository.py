@@ -6,8 +6,7 @@ class ScoringSchemeRepository:
   def __init__(self, db:Session):
     self.db = db
 
-  def create(self, data):
-    scoring_scheme = ScoringScheme(**data)
+  def create(self, scoring_scheme: ScoringScheme):
     self.db.add(scoring_scheme)
     self.db.commit()
     self.db.refresh(scoring_scheme)
@@ -26,10 +25,7 @@ class ScoringSchemeRepository:
       ScoringScheme.user_id == user_id, ScoringScheme.id == scoring_scheme_id
     ).first()
 
-  def update(self, scoring_scheme: ScoringScheme, data: dict):
-    for key, value in data.items():
-      setattr(scoring_scheme, key, value)
-
+  def update(self, scoring_scheme: ScoringScheme):
     self.db.commit()
     self.db.refresh(scoring_scheme)
     return scoring_scheme

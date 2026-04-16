@@ -108,11 +108,30 @@ def goal(client, auth_headers):
     return res.json()
 
 @pytest.fixture
-def task(client, auth_headers,goal):
+def scoring_scheme(client, auth_headers):
+    res = client.post(
+    "/scoring_schemes",
+    headers=auth_headers,
+    json={
+    "title": "normal",
+    "levels_json": {
+        "normal": 1,
+        "good": 2,
+        "perfect": 3
+    }
+    }
+    )
+
+    assert res.status_code in (200, 201)
+    return res.json()
+
+@pytest.fixture
+def task(client, auth_headers,goal,scoring_scheme):
     res = client.post(
         f"/goals/{goal['id']}/tasks",
         json={
             "title": "Test Task",
+            "scoring_scheme_id": scoring_scheme['id']
         },
         headers=auth_headers,
     )
@@ -128,6 +147,7 @@ def task_schedule(client, auth_headers,task):
             "schedule_value_json": {
                 "additionalProp1": {}
             },
+            "start_date": "2026-04-15",
         },
         headers=auth_headers,
     )
@@ -135,22 +155,22 @@ def task_schedule(client, auth_headers,task):
     return res.json()
 
 @pytest.fixture
-def scoring_scheme(client, auth_headers):
+def task_instance(client, auth_headers, task, task_schedule):
     res = client.post(
-    "/scoring_schemes",
-    headers=auth_headers,
-    json={
-    "title": "normal",
-    "levels_json": {
-        "additionalProp1": 0,
-        "additionalProp2": 0,
-        "additionalProp3": 0
-    }
-    }
+        f"/tasks/{task['id']}/task_schedules/{task_schedule['id']}/task_instances",
+        json={
+            "date_instance": "2026-04-16",
+            "scoring_snapshot_json":{
+
+            }
+        },
+        headers=auth_headers,
     )
 
     assert res.status_code in (200, 201)
     return res.json()
+
+
 
 @pytest.fixture
 def reward(client, auth_headers):
