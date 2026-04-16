@@ -61,9 +61,9 @@ def get_owned_goal_or_raise(
 
 4) 在workflow里面可以做成未来确保全部跑到了一次过commit（目前是分开可能遇到task create了，schedule没有create的问题）
 
-5）要把dependencies部分改成build 和 get，只留depends在router
+5）要把dependencies部分改成build 和 get，只留depends在router(done)
 
-5)那些model dump都要改掉，变成router就会给所有资料转成dto,然后不可以在service看到schemas这些字眼，最多dto
+6)那些model dump都要改掉，变成router就会给所有资料转成dto,然后不可以在service看到schemas这些字眼，最多dto
 
 
 
