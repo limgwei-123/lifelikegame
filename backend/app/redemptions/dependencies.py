@@ -8,14 +8,11 @@ from app.redemptions.service import RedemptionService
 
 from app.rewards.repository import RewardRepository
 
-def get_redemption_repository(db: Session = Depends(get_db))->RedemptionRepository:
-  return RedemptionRepository(db)
-
-def get_reward_repository(db: Session = Depends(get_db))->RewardRepository:
-  return RewardRepository(db)
-
-def get_redemption_service(redemption_repo: RedemptionRepository = Depends(get_redemption_repository), reward_repo: RewardRepository = Depends(get_reward_repository))->RedemptionServiceInterface:
+def build_redemption_service(db:Session)->RedemptionServiceInterface:
   return RedemptionService(
-    redemption_repo=redemption_repo,
-    reward_repo=reward_repo
+    redemption_repo=RedemptionRepository(db),
+    reward_repo=RewardRepository(db)
   )
+
+def get_redemption_service(db: Session = Depends(get_db))->RedemptionServiceInterface:
+  return build_redemption_service(db)
