@@ -22,3 +22,4 @@
 1. (set all into build and get in dependencies), only router and use get,others all use build
 2. need to change current model.dump, into dto is better, it easier for make changes
 2026/4/16： complete refractor, continue for redeem reward
+2026/4/21: Complete redeem reward, next step will build frontend according to backend code
