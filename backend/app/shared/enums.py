@@ -16,3 +16,7 @@ class ScheduleType(str, enum.Enum):
   WEEKLY = "weekly"
   MONTHLY = "monthly"
   ONCE = "once"
+
+class RewardStatus(StrEnum):
+  AVAILABLE = "available"
+  REDEEMED = "redeemed"

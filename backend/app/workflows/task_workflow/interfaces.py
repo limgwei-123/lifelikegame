@@ -1,7 +1,7 @@
-from app.workflows.schemas import CreateTaskScheduleRequest, TaskScheduleResponse
+from app.workflows.task_workflow.schemas import CreateTaskScheduleRequest, TaskScheduleResponse
 from typing import Protocol
 
-class WorkflowServiceInterface(Protocol):
+class TaskWorkflowServiceInterface(Protocol):
   def create_task_with_schedule(
       self,
       goal_id: str,

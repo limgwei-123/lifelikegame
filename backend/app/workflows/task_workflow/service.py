@@ -4,12 +4,17 @@ from app.goals.interfaces import GoalServiceInterface
 from app.task_instances.interfaces import TaskInstanceServiceInterface
 from app.scoring_schemes.interfaces import ScoringSchemeServiceInterface
 
-from app.workflows.schemas import CreateTaskWithScheduleRequest, TaskWithScheduleResponse
+from app.workflows.task_workflow.schemas import CreateTaskWithScheduleRequest, TaskWithScheduleResponse
 
 from app.shared.function import get_scoring_scheme_workflow
 
-class WorkflowService:
-  def __init__(self, goal_service: GoalServiceInterface, task_service: TaskServiceInterface, task_schedule_service: TaskScheduleServiceInterface, task_instance_service: TaskInstanceServiceInterface,scoring_scheme_service: ScoringSchemeServiceInterface):
+class TaskWorkflowService:
+  def __init__(self,
+               goal_service: GoalServiceInterface,
+               task_service: TaskServiceInterface,
+               task_schedule_service: TaskScheduleServiceInterface,
+               task_instance_service: TaskInstanceServiceInterface,
+               scoring_scheme_service: ScoringSchemeServiceInterface):
     self.goal_service = goal_service
     self.task_service = task_service
     self.task_schedule_service = task_schedule_service

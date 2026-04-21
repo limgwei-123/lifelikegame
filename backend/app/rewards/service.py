@@ -24,6 +24,9 @@ class RewardService:
   def get_reward_by_id(self, reward_id, user_id):
     return get_owned_reward_or_raise(reward_repo=self.reward_repo, reward_id=reward_id, user_id=user_id)
 
+  def get_available_reward(self, reward_id, user_id):
+    return self.reward_repo.get_available_reward_by_id_and_user_id(reward_id=reward_id, user_id=user_id)
+
   def update_reward(self, reward_id, user_id, data: UpdateRewardRequest):
     reward = get_owned_reward_or_raise(reward_repo=self.reward_repo, reward_id=reward_id, user_id=user_id)
 

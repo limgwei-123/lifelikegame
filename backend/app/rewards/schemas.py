@@ -11,6 +11,7 @@ class UpdateRewardRequest(BaseModel):
   title: str | None = None
   description: str | None = None
   cost_points: int | None = None
+  status: str | None = None
 
 class RewardResponse(BaseModel):
   id: int
