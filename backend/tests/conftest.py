@@ -179,7 +179,7 @@ def reward(client, auth_headers):
     headers=auth_headers,
     json={
     "title": "First Reward",
-    "cost_points": 2
+    "cost_points": 0
     }
     )
 

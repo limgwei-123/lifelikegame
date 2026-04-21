@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import ForeignKey, DateTime, Integer, String, Text, Date
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime
+from app.shared.enums import RewardStatus
 
 from app.db import Base
 
@@ -33,6 +34,13 @@ class Reward(Base):
 
   cost_points: Mapped[int] = mapped_column(
     Integer
+  )
+
+  status: Mapped[str] = mapped_column(
+    String(20),
+    nullable=True,
+    default=RewardStatus.AVAILABLE.value,
+    server_default=RewardStatus.AVAILABLE.value,
   )
 
   description: Mapped[str] = mapped_column(

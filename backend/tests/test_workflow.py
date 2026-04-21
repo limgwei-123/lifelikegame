@@ -14,6 +14,12 @@ def test_create_task_with_schedule(client, auth_headers,goal,scoring_scheme):
       }
   )
 
-
-
   assert task_response.status_code in (200, 201)
+
+def test_redemption_workflow(client, auth_headers, reward):
+  redemption_response = client.post(
+    f"/workflows/rewards/{reward['id']}/redeem",
+    headers=auth_headers,
+  )
+
+  assert redemption_response.status_code in (200, 201)

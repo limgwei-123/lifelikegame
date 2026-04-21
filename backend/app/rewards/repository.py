@@ -1,7 +1,7 @@
 from app.rewards.models import Reward
 from sqlalchemy import func
 from sqlalchemy.orm import Session
-
+from app.shared.enums import RewardStatus
 class RewardRepository:
   def __init__(self, db:Session):
     self.db = db
@@ -17,6 +17,9 @@ class RewardRepository:
 
   def get_by_id_and_user_id(self, reward_id, user_id):
     return self.db.query(Reward).filter(Reward.id == reward_id, Reward.user_id == user_id).first()
+
+  def get_available_reward_by_id_and_user_id(self, reward_id, user_id):
+    return self.db.query(Reward).filter(Reward.id == reward_id, Reward.user_id == user_id, Reward.status == RewardStatus.AVAILABLE).first()
 
   def update(self, reward: Reward):
 
