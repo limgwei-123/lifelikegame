@@ -23,3 +23,4 @@
 2. need to change current model.dump, into dto is better, it easier for make changes
 2026/4/16： complete refractor, continue for redeem reward
 2026/4/21: Complete redeem reward, next step will build frontend according to backend code
+2026/4/29: Complete basic frontend(still need upcoming dates, put goal and task into profile page, user first time signup get into page, then need to jump out set goal)
