@@ -3,7 +3,7 @@ import { Field } from "../components/Field.jsx";
 import { MetricCard } from "../components/MetricCard.jsx";
 import { PageHeader } from "../components/PageHeader.jsx";
 
-export function ProfilePage({ profile, ledgers, balance }) {
+export function ProfilePage({ profile, ledgers, balance, onNavigate }) {
   const [screen, setScreen] = useState("home");
 
   if (screen === "edit") {
@@ -81,6 +81,18 @@ export function ProfilePage({ profile, ledgers, balance }) {
         <div className="panel phone-profile-card">
           <p className="profile-email">{profile.email}</p>
           <div className="phone-profile-actions">
+            <button className="profile-menu-button" onClick={() => onNavigate("goals")} type="button">
+              <span>Goals</span>
+              <b>›</b>
+            </button>
+            <button className="profile-menu-button" onClick={() => onNavigate("tasks")} type="button">
+              <span>Tasks</span>
+              <b>›</b>
+            </button>
+            <button className="profile-menu-button" onClick={() => onNavigate("scoring")} type="button">
+              <span>Scoring schemes</span>
+              <b>›</b>
+            </button>
             <button className="profile-menu-button" onClick={() => setScreen("edit")} type="button">
               <span>Edit profile</span>
               <b>›</b>

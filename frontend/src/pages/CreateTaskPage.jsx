@@ -15,11 +15,13 @@ export function TasksPage({ tasks, setTasks }) {
 
   const openCreate = () => {
     setEditingTask(null);
+    setScheduleType("weekly");
     setIsCreating(true);
   };
 
   const openEdit = (task) => {
     setEditingTask(task);
+    setScheduleType(task.generated_reason);
     setIsCreating(true);
   };
 
@@ -35,6 +37,7 @@ export function TasksPage({ tasks, setTasks }) {
       goal: data.goal,
       description: data.description,
       generated_reason: scheduleType,
+      schedule_date: scheduleType === "once" ? data.schedule_date : null,
       scoring_snapshot_json: editingTask?.scoring_snapshot_json ?? { done: 1, good: 2, perfect: 3 }
     };
 
@@ -163,7 +166,7 @@ export function TasksPage({ tasks, setTasks }) {
           ) : null}
 
           <Field label={scheduleType === "once" ? "Date" : "Start date"}>
-            <input type="date" />
+            <input defaultValue={editingTask?.schedule_date ?? ""} name="schedule_date" type="date" />
           </Field>
 
           {scheduleType !== "once" ? (
