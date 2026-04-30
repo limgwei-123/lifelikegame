@@ -10,8 +10,9 @@ from app.scoring_schemes.router import router as scoring_scheme_router
 from app.point_ledgers.router import router as point_ledger_router
 from app.rewards.router import router as reward_router
 from app.redemptions.router import router as redemption_router
-
+from app.ai_planner.router import router as ai_planner_router
 from app.workflows.router import router as workflow_router
+
 router = APIRouter(
   dependencies=[Depends(get_current_user)]
 )
@@ -26,3 +27,4 @@ router.include_router(point_ledger_router)
 router.include_router(reward_router)
 router.include_router(redemption_router)
 router.include_router(workflow_router)
+router.include_router(ai_planner_router)
