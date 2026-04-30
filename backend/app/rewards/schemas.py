@@ -19,6 +19,7 @@ class RewardResponse(BaseModel):
   title: str
   description: str | None = None
   cost_points: int | None = None
+  status: str | None = None
   created_at: datetime
   updated_at: datetime
 

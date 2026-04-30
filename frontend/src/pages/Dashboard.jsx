@@ -96,8 +96,8 @@ export function Dashboard({ tasks, balance, onComplete }) {
       <CompletionModal
         task={selectedTask}
         onClose={closeModal}
-        onComplete={(level) => {
-          onComplete(selectedTask.id, level);
+        onComplete={async (level) => {
+          await onComplete(selectedTask.id, level);
           closeModal();
         }}
       />

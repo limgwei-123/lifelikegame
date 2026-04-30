@@ -3,12 +3,10 @@ import { CardMenu } from "../components/CardMenu.jsx";
 import { CreateSheet } from "../components/CreateSheet.jsx";
 import { Field } from "../components/Field.jsx";
 import { PageHeader } from "../components/PageHeader.jsx";
-import { mockGoals } from "../data/mockData.js";
 
-export function GoalsPage() {
+export function GoalsPage({ goals, onDelete, onSave }) {
   const [isCreating, setIsCreating] = useState(false);
   const [editingGoal, setEditingGoal] = useState(null);
-  const [goals, setGoals] = useState(mockGoals);
 
   const openCreate = () => {
     setEditingGoal(null);
@@ -20,20 +18,10 @@ export function GoalsPage() {
     setIsCreating(true);
   };
 
-  const deleteGoal = (goalId) => {
-    setGoals((items) => items.filter((goal) => goal.id !== goalId));
-  };
-
-  const saveGoal = (event) => {
+  const saveGoal = async (event) => {
     event.preventDefault();
     const data = Object.fromEntries(new FormData(event.currentTarget));
-    if (editingGoal) {
-      setGoals((items) =>
-        items.map((goal) => (goal.id === editingGoal.id ? { ...goal, ...data } : goal))
-      );
-    } else {
-      setGoals((items) => [...items, { id: Date.now(), ...data }]);
-    }
+    await onSave(editingGoal, data);
     setIsCreating(false);
   };
 
@@ -54,7 +42,7 @@ export function GoalsPage() {
               <article className="plain-card editable-card" key={goal.id} onClick={() => openEdit(goal)}>
                 <div className="card-title-bar">
                   <h4>{goal.title}</h4>
-                  <CardMenu label="Goal actions" onDelete={() => deleteGoal(goal.id)} />
+                  <CardMenu label="Goal actions" onDelete={() => onDelete(goal.id)} />
                 </div>
                 <p>{goal.current_value} / {goal.target_value}</p>
                 <div className="date-row">

@@ -3,8 +3,13 @@ import { Field } from "../components/Field.jsx";
 import { MetricCard } from "../components/MetricCard.jsx";
 import { PageHeader } from "../components/PageHeader.jsx";
 
-export function ProfilePage({ profile, ledgers, balance, onNavigate }) {
+export function ProfilePage({ profile, ledgers, balance, onLogout, onNavigate }) {
   const [screen, setScreen] = useState("home");
+  const safeProfile = profile ?? {
+    display_name: "",
+    email: "",
+    timezone: "Asia/Kuala_Lumpur"
+  };
 
   if (screen === "edit") {
     return (
@@ -18,13 +23,13 @@ export function ProfilePage({ profile, ledgers, balance, onNavigate }) {
           <div className="panel">
             <form className="form-grid">
               <Field label="Display name">
-                <input defaultValue={profile.display_name} />
+                <input defaultValue={safeProfile.display_name} />
               </Field>
               <Field label="Email">
-                <input defaultValue={profile.email} type="email" />
+                <input defaultValue={safeProfile.email} type="email" />
               </Field>
               <Field label="Timezone">
-                <select defaultValue={profile.timezone}>
+                <select defaultValue={safeProfile.timezone}>
                   <option value="Asia/Kuala_Lumpur">Asia/Kuala_Lumpur</option>
                   <option value="Asia/Singapore">Asia/Singapore</option>
                   <option value="UTC">UTC</option>
@@ -73,13 +78,13 @@ export function ProfilePage({ profile, ledgers, balance, onNavigate }) {
 
       <section className="metrics-grid">
         <MetricCard label="Point balance" value={`${balance} pts`} detail="Current usable balance" />
-        <MetricCard label="Email" value={profile.email} detail="Login account" />
-        <MetricCard label="Timezone" value={profile.timezone} detail="Used for daily task timing" />
+        <MetricCard label="Email" value={safeProfile.email} detail="Login account" />
+        <MetricCard label="Timezone" value={safeProfile.timezone} detail="Used for daily task timing" />
       </section>
 
       <section className="phone-profile">
         <div className="panel phone-profile-card">
-          <p className="profile-email">{profile.email}</p>
+          <p className="profile-email">{safeProfile.email}</p>
           <div className="phone-profile-actions">
             <button className="profile-menu-button" onClick={() => onNavigate("goals")} type="button">
               <span>Goals</span>
@@ -103,7 +108,7 @@ export function ProfilePage({ profile, ledgers, balance, onNavigate }) {
             </button>
           </div>
         </div>
-        <button className="logout-bottom-button" type="button">Logout</button>
+        <button className="logout-bottom-button" onClick={onLogout} type="button">Logout</button>
       </section>
     </>
   );

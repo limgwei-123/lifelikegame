@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.db import db_ping
 from app.routers.public import router as public_router
@@ -19,6 +20,17 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 register_exception_handlers(app)
+
+app.add_middleware(
+  CORSMiddleware,
+  allow_origins=[
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+  ],
+  allow_credentials=True,
+  allow_methods=["*"],
+  allow_headers=["*"],
+)
 
 app.include_router(public_router)
 app.include_router(protected_router)
