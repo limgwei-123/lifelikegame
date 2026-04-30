@@ -31,6 +31,18 @@ export const mockTasks = [
     score_awarded: 2,
     generated_reason: "daily",
     scoring_snapshot_json: { perfect: 3, normal: 2, minimal: 1, none: 0 }
+  },
+  {
+    id: 4,
+    title: "Submit project checkpoint",
+    goal: "Improve system design",
+    description: "Prepare notes and submit the milestone update.",
+    status: "todo",
+    completion_level: null,
+    score_awarded: 0,
+    generated_reason: "once",
+    schedule_date: "2026-05-04",
+    scoring_snapshot_json: { perfect: 5, normal: 3, minimal: 1, none: 0 }
   }
 ];
 
