@@ -3,16 +3,15 @@ import { CardMenu } from "../components/CardMenu.jsx";
 import { CreateSheet } from "../components/CreateSheet.jsx";
 import { Field } from "../components/Field.jsx";
 import { PageHeader } from "../components/PageHeader.jsx";
+import {
+  createScoringScheme,
+  deleteScoringScheme,
+  updateScoringScheme
+} from "../api/scoringSchemesApi.js";
 
-const defaultSchemes = [
-  { title: "normal", levels_json: { done: 1, good: 2, perfect: 3 } },
-  { title: "deep-work", levels_json: { done: 2, good: 4, perfect: 6 } }
-];
-
-export function ScoringSchemesPage() {
+export function ScoringSchemesPage({ onReload, schemes }) {
   const [isCreating, setIsCreating] = useState(false);
   const [editingScheme, setEditingScheme] = useState(null);
-  const [schemes, setSchemes] = useState(defaultSchemes);
   const [levels, setLevels] = useState([
     { id: 1, name: "done", points: 1 },
     { id: 2, name: "good", points: 2 },
@@ -67,11 +66,12 @@ export function ScoringSchemesPage() {
     setIsCreating(true);
   };
 
-  const deleteScheme = (title) => {
-    setSchemes((items) => items.filter((scheme) => scheme.title !== title));
+  const deleteScheme = async (schemeId) => {
+    await deleteScoringScheme(schemeId);
+    await onReload();
   };
 
-  const saveScheme = (event) => {
+  const saveScheme = async (event) => {
     event.preventDefault();
     const data = Object.fromEntries(new FormData(event.currentTarget));
     const nextScheme = {
@@ -79,12 +79,11 @@ export function ScoringSchemesPage() {
       levels_json: levelsPreview
     };
     if (editingScheme) {
-      setSchemes((items) =>
-        items.map((scheme) => (scheme.title === editingScheme.title ? nextScheme : scheme))
-      );
+      await updateScoringScheme(editingScheme.id, nextScheme);
     } else {
-      setSchemes((items) => [...items, nextScheme]);
+      await createScoringScheme(nextScheme);
     }
+    await onReload();
     setIsCreating(false);
   };
 
@@ -102,10 +101,10 @@ export function ScoringSchemesPage() {
           </div>
           <div className="card-list">
             {schemes.map((scheme) => (
-              <article className="plain-card editable-card" key={scheme.title} onClick={() => openEdit(scheme)}>
+              <article className="plain-card editable-card" key={scheme.id} onClick={() => openEdit(scheme)}>
                 <div className="card-title-bar">
                   <h4>{scheme.title}</h4>
-                  <CardMenu label="Scoring scheme actions" onDelete={() => deleteScheme(scheme.title)} />
+                  <CardMenu label="Scoring scheme actions" onDelete={() => deleteScheme(scheme.id)} />
                 </div>
                 <div className="scheme-row">
                   {Object.entries(scheme.levels_json).map(([level, value]) => (

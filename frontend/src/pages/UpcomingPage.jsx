@@ -1,15 +1,7 @@
-import React, { useMemo } from "react";
+import React from "react";
 import { PageHeader } from "../components/PageHeader.jsx";
 
-export function UpcomingPage({ tasks }) {
-  const upcomingTasks = useMemo(() => {
-    return tasks
-      .filter((task) => task.generated_reason === "once")
-      .sort((left, right) => {
-        return (left.schedule_date ?? "").localeCompare(right.schedule_date ?? "");
-      });
-  }, [tasks]);
-
+export function UpcomingPage({ items }) {
   return (
     <>
       <PageHeader eyebrow="Upcoming" title="Upcoming Dates" />
@@ -18,13 +10,13 @@ export function UpcomingPage({ tasks }) {
         <div className="panel">
           <div className="section-title compact">
             <h3>Once tasks</h3>
-            <span className="pill">{upcomingTasks.length} scheduled</span>
+            <span className="pill">{items.length} scheduled</span>
           </div>
           <div className="card-list">
-            {upcomingTasks.length === 0 ? (
+            {items.length === 0 ? (
               <p className="empty-text">No once dates scheduled yet.</p>
             ) : null}
-            {upcomingTasks.map((task) => (
+            {items.map((task) => (
               <article className="plain-card upcoming-card" key={task.id}>
                 <div>
                   <h4>{task.title}</h4>

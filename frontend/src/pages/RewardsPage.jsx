@@ -5,13 +5,12 @@ import { Field } from "../components/Field.jsx";
 import { MetricCard } from "../components/MetricCard.jsx";
 import { PageHeader } from "../components/PageHeader.jsx";
 
-export function RewardsPage({ rewards, balance }) {
+export function RewardsPage({ rewards, balance, onDelete, onRedeem, onSave }) {
   const [activeStatus, setActiveStatus] = useState("available");
   const [isCreating, setIsCreating] = useState(false);
   const [editingReward, setEditingReward] = useState(null);
-  const [rewardItems, setRewardItems] = useState(rewards);
-  const availableRewards = rewardItems.filter((reward) => reward.status === "available");
-  const redeemedRewards = rewardItems.filter((reward) => reward.status === "redeemed");
+  const availableRewards = rewards.filter((reward) => reward.status !== "redeemed");
+  const redeemedRewards = rewards.filter((reward) => reward.status === "redeemed");
   const visibleRewards = activeStatus === "available" ? availableRewards : redeemedRewards;
 
   const openCreate = () => {
@@ -24,11 +23,7 @@ export function RewardsPage({ rewards, balance }) {
     setIsCreating(true);
   };
 
-  const deleteReward = (rewardId) => {
-    setRewardItems((items) => items.filter((reward) => reward.id !== rewardId));
-  };
-
-  const saveReward = (event) => {
+  const saveReward = async (event) => {
     event.preventDefault();
     const data = Object.fromEntries(new FormData(event.currentTarget));
     const nextReward = {
@@ -36,13 +31,7 @@ export function RewardsPage({ rewards, balance }) {
       description: data.description,
       cost_points: Number(data.cost_points) || 0
     };
-    if (editingReward) {
-      setRewardItems((items) =>
-        items.map((reward) => (reward.id === editingReward.id ? { ...reward, ...nextReward } : reward))
-      );
-    } else {
-      setRewardItems((items) => [...items, { id: Date.now(), status: "available", ...nextReward }]);
-    }
+    await onSave(editingReward, nextReward);
     setIsCreating(false);
   };
 
@@ -54,7 +43,7 @@ export function RewardsPage({ rewards, balance }) {
           <div>
             <div className="card-title-bar">
               <h4>{reward.title}</h4>
-              <CardMenu label="Reward actions" onDelete={() => deleteReward(reward.id)} />
+              <CardMenu label="Reward actions" onDelete={() => onDelete(reward.id)} />
             </div>
             <p>{reward.description}</p>
           </div>
@@ -63,7 +52,10 @@ export function RewardsPage({ rewards, balance }) {
             {reward.status === "available" ? (
               <button
                 className="secondary-button"
-                onClick={(event) => event.stopPropagation()}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onRedeem(reward.id);
+                }}
                 type="button"
               >
                 Redeem
@@ -85,8 +77,8 @@ export function RewardsPage({ rewards, balance }) {
         </button>
       </PageHeader>
       <section className="metrics-grid">
-        <MetricCard label="Available balance" value={`${balance} pts`} detail="Preview from mock point ledger" />
-        <MetricCard label="Rewards" value={rewardItems.length} detail="Items that can be redeemed" />
+        <MetricCard label="Available balance" value={`${balance} pts`} detail="Current point ledger balance" />
+        <MetricCard label="Rewards" value={rewards.length} detail="Items that can be redeemed" />
       </section>
       <section className="single-panel-layout">
         <div className="panel">

@@ -7,7 +7,7 @@ import { PageHeader } from "../components/PageHeader.jsx";
 const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const monthDays = Array.from({ length: 31 }, (_, index) => index + 1);
 
-export function TasksPage({ tasks, setTasks }) {
+export function TasksPage({ goals, onDelete, onSave, scoringSchemes, tasks }) {
   const [isCreating, setIsCreating] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [scheduleType, setScheduleType] = useState("weekly");
@@ -25,38 +25,10 @@ export function TasksPage({ tasks, setTasks }) {
     setIsCreating(true);
   };
 
-  const deleteTask = (taskId) => {
-    setTasks((items) => items.filter((task) => task.id !== taskId));
-  };
-
-  const saveTask = (event) => {
+  const saveTask = async (event) => {
     event.preventDefault();
     const data = Object.fromEntries(new FormData(event.currentTarget));
-    const nextTask = {
-      title: data.title,
-      goal: data.goal,
-      description: data.description,
-      generated_reason: scheduleType,
-      schedule_date: scheduleType === "once" ? data.schedule_date : null,
-      scoring_snapshot_json: editingTask?.scoring_snapshot_json ?? { done: 1, good: 2, perfect: 3 }
-    };
-
-    if (editingTask) {
-      setTasks((items) =>
-        items.map((task) => (task.id === editingTask.id ? { ...task, ...nextTask } : task))
-      );
-    } else {
-      setTasks((items) => [
-        ...items,
-        {
-          id: Date.now(),
-          status: "todo",
-          completion_level: null,
-          score_awarded: 0,
-          ...nextTask
-        }
-      ]);
-    }
+    await onSave(editingTask, { ...data, schedule_type: scheduleType, monthly_day: monthlyDay });
     setIsCreating(false);
   };
 
@@ -88,7 +60,7 @@ export function TasksPage({ tasks, setTasks }) {
                   <div>
                     <div className="card-title-bar">
                       <h4>{task.title}</h4>
-                      <CardMenu label="Task actions" onDelete={() => deleteTask(task.id)} />
+                      <CardMenu label="Task actions" onDelete={() => onDelete(task.id)} />
                     </div>
                     <span className="pill muted">{task.generated_reason} schedule</span>
                     <p>{task.description}</p>
@@ -112,19 +84,21 @@ export function TasksPage({ tasks, setTasks }) {
             <input defaultValue={editingTask?.title ?? ""} name="title" placeholder="Morning workout" />
           </Field>
           <Field label="Goal">
-            <select defaultValue={editingTask?.goal ?? "Build consistent fitness"} name="goal">
-              <option value="Build consistent fitness">Build consistent fitness</option>
-              <option value="Improve system design">Improve system design</option>
-              <option value="Better sleep rhythm">Better sleep rhythm</option>
+            <select defaultValue={editingTask?.goal_id ?? goals[0]?.id ?? ""} name="goal_id" required>
+              {goals.map((goal) => (
+                <option key={goal.id} value={goal.id}>{goal.title}</option>
+              ))}
             </select>
           </Field>
           <Field label="Description">
             <textarea defaultValue={editingTask?.description ?? ""} name="description" placeholder="What should the task contain?" rows="4" />
           </Field>
           <Field label="Scoring scheme">
-            <select defaultValue="normal">
-              <option value="normal">Normal: 3 / 2 / 1 / 0</option>
-              <option value="deep-work">Deep work: 5 / 3 / 1 / 0</option>
+            <select defaultValue={editingTask?.scoring_scheme_id ?? scoringSchemes[0]?.id ?? ""} name="scoring_scheme_id">
+              <option value="">Default</option>
+              {scoringSchemes.map((scheme) => (
+                <option key={scheme.id} value={scheme.id}>{scheme.title}</option>
+              ))}
             </select>
           </Field>
           <Field label="Schedule type">
@@ -171,7 +145,7 @@ export function TasksPage({ tasks, setTasks }) {
 
           {scheduleType !== "once" ? (
             <Field label="End date">
-              <input type="date" />
+              <input defaultValue={editingTask?.schedule_end_date ?? ""} name="end_date" type="date" />
             </Field>
           ) : null}
 

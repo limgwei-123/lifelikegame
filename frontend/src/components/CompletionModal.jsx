@@ -3,7 +3,7 @@ import React from "react";
 export function CompletionModal({ task, onClose, onComplete }) {
   if (!task) return null;
 
-  const levels = Object.entries(task.scoring_snapshot_json);
+  const levels = Object.entries(task.scoring_snapshot_json || { done: 1 });
 
   return (
     <div className="modal-backdrop" role="presentation">
