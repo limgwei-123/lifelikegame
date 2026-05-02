@@ -24,3 +24,4 @@
 2026/4/16： complete refractor, continue for redeem reward
 2026/4/21: Complete redeem reward, next step will build frontend according to backend code
 2026/4/29: Complete basic frontend(still need upcoming dates, put goal and task into profile page, user first time signup get into page, then need to jump out set goal)
+2026/4/30: Complete upcoming dates, goal and task into profile page, now need to work on ai handling backend, first time create jump to create task and goal page,and frontend handling backend ai（check e2e testing)
