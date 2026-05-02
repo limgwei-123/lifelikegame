@@ -6,8 +6,10 @@ from app.scoring_schemes.interfaces import ScoringSchemeServiceInterface
 
 from app.workflows.task_workflow.schemas import CreateTaskWithScheduleRequest, TaskWithScheduleResponse,ConfirmAiPlanRequest,GoalTaskSchduleResponse
 
-from app.shared.function import get_scoring_scheme_workflow
+from app.shared.function import get_scoring_scheme_workflow, generate_task_instances_for_today
 from app.workflows.task_workflow.mappers import map_plan_to_goal_request,map_plan_to_task_with_schedule_requests
+
+from datetime import date
 
 class TaskWorkflowService:
   def __init__(self,
@@ -52,6 +54,8 @@ class TaskWorkflowService:
           date_instance=schedule.start_date
         )
 
+      generate_task_instances_for_today(task_instance_service=self.task_instance_service)
+
       task.schedule = schedule
 
     return TaskWithScheduleResponse(
@@ -79,6 +83,8 @@ class TaskWorkflowService:
       )
 
       task_with_schedule_list.append(task_schedule)
+
+    generate_task_instances_for_today(task_instance_service=self.task_instance_service)
 
     return GoalTaskSchduleResponse(
       goal=goal,

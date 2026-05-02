@@ -4,10 +4,12 @@ from app.workflows.task_workflow.schemas import CreateTaskWithScheduleRequest,Co
 from app.tasks.schemas import CreateTaskRequest
 from app.task_schedules.schemas import CreateTaskScheduleRequest
 from app.ai_planner.schemas import GeneratedTask
+from datetime import date
 
 def map_plan_to_goal_request(plan: ConfirmAiPlanRequest) -> CreateGoalRequest:
     return CreateGoalRequest(
-        title=plan.goal_title
+        title=plan.goal_title,
+        start_date=date.today()
     )
 
 def map_generated_task_to_task_with_schedule_request(
@@ -22,6 +24,7 @@ def map_generated_task_to_task_with_schedule_request(
         schedule=CreateTaskScheduleRequest(
             schedule_type=ai_task.schedule_type,
             schedule_value_json=ai_task.schedule_value_json,
+            start_date=date.today()
         ),
     )
 

@@ -12,3 +12,10 @@ export function redeemReward(rewardId) {
     method: "POST"
   });
 }
+
+export function confirmAiPlan(plan) {
+  return apiRequest("/workflows/ai/confirm", {
+    method: "POST",
+    body: { plan }
+  });
+}
