@@ -12,6 +12,8 @@ import {
 export function ScoringSchemesPage({ onReload, schemes }) {
   const [isCreating, setIsCreating] = useState(false);
   const [editingScheme, setEditingScheme] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
   const [levels, setLevels] = useState([
     { id: 1, name: "done", points: 1 },
     { id: 2, name: "good", points: 2 },
@@ -51,6 +53,7 @@ export function ScoringSchemesPage({ onReload, schemes }) {
       { id: 2, name: "good", points: 2 },
       { id: 3, name: "perfect", points: 3 }
     ]);
+    setError("");
     setIsCreating(true);
   };
 
@@ -63,6 +66,7 @@ export function ScoringSchemesPage({ onReload, schemes }) {
         points
       }))
     );
+    setError("");
     setIsCreating(true);
   };
 
@@ -73,18 +77,28 @@ export function ScoringSchemesPage({ onReload, schemes }) {
 
   const saveScheme = async (event) => {
     event.preventDefault();
+    if (saving) return;
+
     const data = Object.fromEntries(new FormData(event.currentTarget));
     const nextScheme = {
       title: data.title || "normal",
       levels_json: levelsPreview
     };
-    if (editingScheme) {
-      await updateScoringScheme(editingScheme.id, nextScheme);
-    } else {
-      await createScoringScheme(nextScheme);
+    setSaving(true);
+    setError("");
+    try {
+      if (editingScheme) {
+        await updateScoringScheme(editingScheme.id, nextScheme);
+      } else {
+        await createScoringScheme(nextScheme);
+      }
+      await onReload();
+      setIsCreating(false);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
     }
-    await onReload();
-    setIsCreating(false);
   };
 
   return (
@@ -124,6 +138,7 @@ export function ScoringSchemesPage({ onReload, schemes }) {
         onClose={() => setIsCreating(false)}
       >
         <form className="form-grid" onSubmit={saveScheme}>
+          {error ? <p className="empty-text">{error}</p> : null}
           <Field label="Title">
             <input defaultValue={editingScheme?.title ?? "normal"} name="title" />
           </Field>
@@ -166,7 +181,9 @@ export function ScoringSchemesPage({ onReload, schemes }) {
               ))}
             </div>
           </div>
-          <button className="primary-button" type="submit">Save preview</button>
+          <button className="primary-button" disabled={saving} type="submit">
+            {saving ? "Saving..." : "Save"}
+          </button>
         </form>
       </CreateSheet>
     </>

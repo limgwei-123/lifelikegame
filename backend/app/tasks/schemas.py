@@ -14,7 +14,7 @@ class UpdateTaskRequest(BaseModel):
   title: str | None  = None
   description: str | None  = None
   is_active: bool = True
-  scoring_scheme_id: str | None = None
+  scoring_scheme_id: int | None = None
   scoring_scheme_json: dict | None = None
   is_scoring_scheme_locked: bool = False
 class TaskResponse(BaseModel):

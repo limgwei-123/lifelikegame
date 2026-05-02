@@ -22,20 +22,20 @@ export function ProfilePage({ profile, ledgers, balance, onLogout, onNavigate })
         <section className="phone-profile">
           <div className="panel">
             <form className="form-grid">
+              <p className="empty-text">Profile changes need a backend update endpoint before they can be saved.</p>
               <Field label="Display name">
-                <input defaultValue={safeProfile.display_name} />
+                <input defaultValue={safeProfile.display_name} disabled />
               </Field>
               <Field label="Email">
-                <input defaultValue={safeProfile.email} type="email" />
+                <input defaultValue={safeProfile.email} disabled type="email" />
               </Field>
               <Field label="Timezone">
-                <select defaultValue={safeProfile.timezone}>
+                <select defaultValue={safeProfile.timezone} disabled>
                   <option value="Asia/Kuala_Lumpur">Asia/Kuala_Lumpur</option>
                   <option value="Asia/Singapore">Asia/Singapore</option>
                   <option value="UTC">UTC</option>
                 </select>
               </Field>
-              <button className="primary-button" type="button">Save preview</button>
             </form>
           </div>
         </section>

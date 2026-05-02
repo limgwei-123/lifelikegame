@@ -27,7 +27,8 @@ import {
   updateTask
 } from "./api/tasksApi.js";
 import { getMe } from "./api/usersApi.js";
-import { createTaskWithSchedule, redeemReward } from "./api/workflowsApi.js";
+import { confirmAiPlan, createTaskWithSchedule, redeemReward } from "./api/workflowsApi.js";
+import { AiPlannerPage } from "./pages/AiPlannerPage.jsx";
 import { AuthPage } from "./pages/AuthPage.jsx";
 import { Dashboard } from "./pages/Dashboard.jsx";
 import { GoalsPage } from "./pages/GoalsPage.jsx";
@@ -36,10 +37,12 @@ import { RewardsPage } from "./pages/RewardsPage.jsx";
 import { ScoringSchemesPage } from "./pages/ScoringSchemesPage.jsx";
 import { ProfilePage } from "./pages/ProfilePage.jsx";
 import { UpcomingPage } from "./pages/UpcomingPage.jsx";
+import { formatScheduleLabel } from "./utils/scheduleLabels.js";
 
 const tabs = [
   { id: "dashboard", label: "Dashboard" },
   { id: "upcoming", label: "Upcoming" },
+  { id: "ai", label: "AI" },
   { id: "rewards", label: "Rewards" },
   { id: "profile", label: "Profile" }
 ];
@@ -55,6 +58,10 @@ function mapInstance(instance, task, goal, schedule) {
     description: task?.description ?? "",
     goal: goal?.title ?? "Goal",
     generated_reason: instance.generated_reason || schedule?.schedule_type || "scheduled",
+    schedule_label: formatScheduleLabel(
+      schedule?.schedule_type ?? instance.generated_reason,
+      schedule?.schedule_value_json
+    ),
     scoring_snapshot_json: scoring
   };
 }
@@ -68,6 +75,7 @@ function mapTask(task, goals, schedules) {
     goal: goal?.title ?? "Goal",
     goal_title: goal?.title ?? "Goal",
     generated_reason: schedule?.schedule_type ?? "daily",
+    schedule_label: formatScheduleLabel(schedule?.schedule_type ?? "daily", schedule?.schedule_value_json),
     schedule_id: schedule?.id ?? null,
     schedule_value_json: schedule?.schedule_value_json ?? {},
     schedule_start_date: schedule?.start_date ?? "",
@@ -85,7 +93,7 @@ function buildSchedulePayload(data, scheduleType) {
     schedule_type: scheduleType,
     schedule_value_json:
       scheduleType === "weekly"
-        ? { days: [0, 2, 4] }
+        ? { days: data.weekly_days?.map(Number) ?? [] }
         : scheduleType === "monthly"
           ? { day: Number(data.monthly_day) || 1 }
           : scheduleType === "once"
@@ -225,10 +233,18 @@ export default function App() {
   };
 
   const saveGoal = async (goal, payload) => {
+    const nextGoal = {
+      ...payload,
+      start_date: payload.start_date || null,
+      target_date: payload.target_date || null,
+      current_value: payload.current_value || null,
+      target_value: payload.target_value || null
+    };
+
     if (goal) {
-      await updateGoal(goal.id, payload);
+      await updateGoal(goal.id, nextGoal);
     } else {
-      await createGoal(payload);
+      await createGoal(nextGoal);
     }
     setGoals(await listGoals());
   };
@@ -291,6 +307,12 @@ export default function App() {
     setRewards(rewardList);
   };
 
+  const handleConfirmAiPlan = async (plan) => {
+    await confirmAiPlan(plan);
+    await loadProtectedData();
+    setActiveTab("dashboard");
+  };
+
   const logout = () => {
     clearToken();
     setIsAuthed(false);
@@ -301,6 +323,7 @@ export default function App() {
   const currentPage = {
     dashboard: <Dashboard tasks={dashboardTasks} balance={balance} onComplete={completeTask} />,
     upcoming: <UpcomingPage items={upcomingItems} />,
+    ai: <AiPlannerPage onConfirmPlan={handleConfirmAiPlan} />,
     goals: <GoalsPage goals={goals} onDelete={removeGoal} onSave={saveGoal} />,
     tasks: (
       <TasksPage

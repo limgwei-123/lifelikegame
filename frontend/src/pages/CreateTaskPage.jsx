@@ -12,24 +12,48 @@ export function TasksPage({ goals, onDelete, onSave, scoringSchemes, tasks }) {
   const [editingTask, setEditingTask] = useState(null);
   const [scheduleType, setScheduleType] = useState("weekly");
   const [monthlyDay, setMonthlyDay] = useState(1);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   const openCreate = () => {
     setEditingTask(null);
     setScheduleType("weekly");
+    setMonthlyDay(1);
+    setError("");
     setIsCreating(true);
   };
 
   const openEdit = (task) => {
     setEditingTask(task);
     setScheduleType(task.generated_reason);
+    setMonthlyDay(task.schedule_value_json?.day ?? 1);
+    setError("");
     setIsCreating(true);
   };
 
   const saveTask = async (event) => {
     event.preventDefault();
-    const data = Object.fromEntries(new FormData(event.currentTarget));
-    await onSave(editingTask, { ...data, schedule_type: scheduleType, monthly_day: monthlyDay });
-    setIsCreating(false);
+    if (saving) return;
+
+    const formData = new FormData(event.currentTarget);
+    const data = Object.fromEntries(formData);
+    const weeklyDays = formData.getAll("weekly_days");
+
+    setSaving(true);
+    setError("");
+    try {
+      await onSave(editingTask, {
+        ...data,
+        schedule_type: scheduleType,
+        monthly_day: monthlyDay,
+        weekly_days: weeklyDays
+      });
+      setIsCreating(false);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -62,7 +86,7 @@ export function TasksPage({ goals, onDelete, onSave, scoringSchemes, tasks }) {
                       <h4>{task.title}</h4>
                       <CardMenu label="Task actions" onDelete={() => onDelete(task.id)} />
                     </div>
-                    <span className="pill muted">{task.generated_reason} schedule</span>
+                    <span className="pill muted">{task.schedule_label}</span>
                     <p>{task.description}</p>
                     <span className="goal-link">{task.goal}</span>
                   </div>
@@ -80,6 +104,7 @@ export function TasksPage({ goals, onDelete, onSave, scoringSchemes, tasks }) {
         onClose={() => setIsCreating(false)}
       >
         <form className="form-grid two-column" onSubmit={saveTask}>
+          {error ? <p className="empty-text">{error}</p> : null}
           <Field label="Task title">
             <input defaultValue={editingTask?.title ?? ""} name="title" placeholder="Morning workout" />
           </Field>
@@ -114,7 +139,12 @@ export function TasksPage({ goals, onDelete, onSave, scoringSchemes, tasks }) {
             <div className="day-picker">
               {days.map((day, index) => (
                 <label key={day}>
-                  <input defaultChecked={[0, 2, 4].includes(index)} type="checkbox" />
+                  <input
+                    defaultChecked={(editingTask?.schedule_value_json?.days ?? [0, 2, 4]).includes(index)}
+                    name="weekly_days"
+                    type="checkbox"
+                    value={index}
+                  />
                   <span>{day.slice(0, 3)}</span>
                 </label>
               ))}
@@ -151,7 +181,9 @@ export function TasksPage({ goals, onDelete, onSave, scoringSchemes, tasks }) {
 
           <div className="form-actions">
             <button className="secondary-button" type="button">Reset</button>
-            <button className="primary-button" type="submit">Save preview</button>
+            <button className="primary-button" disabled={saving} type="submit">
+              {saving ? "Saving..." : "Save"}
+            </button>
           </div>
         </form>
       </CreateSheet>

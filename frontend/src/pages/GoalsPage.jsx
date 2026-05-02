@@ -7,22 +7,36 @@ import { PageHeader } from "../components/PageHeader.jsx";
 export function GoalsPage({ goals, onDelete, onSave }) {
   const [isCreating, setIsCreating] = useState(false);
   const [editingGoal, setEditingGoal] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   const openCreate = () => {
     setEditingGoal(null);
+    setError("");
     setIsCreating(true);
   };
 
   const openEdit = (goal) => {
     setEditingGoal(goal);
+    setError("");
     setIsCreating(true);
   };
 
   const saveGoal = async (event) => {
     event.preventDefault();
+    if (saving) return;
+
     const data = Object.fromEntries(new FormData(event.currentTarget));
-    await onSave(editingGoal, data);
-    setIsCreating(false);
+    setSaving(true);
+    setError("");
+    try {
+      await onSave(editingGoal, data);
+      setIsCreating(false);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -62,6 +76,7 @@ export function GoalsPage({ goals, onDelete, onSave }) {
         onClose={() => setIsCreating(false)}
       >
         <form className="form-grid" onSubmit={saveGoal}>
+          {error ? <p className="empty-text">{error}</p> : null}
           <Field label="Title">
             <input defaultValue={editingGoal?.title ?? ""} name="title" placeholder="Build consistent fitness" />
           </Field>
@@ -77,7 +92,9 @@ export function GoalsPage({ goals, onDelete, onSave }) {
           <Field label="Target value">
             <input defaultValue={editingGoal?.target_value ?? ""} name="target_value" placeholder="40 workouts" />
           </Field>
-          <button className="primary-button" type="submit">Save preview</button>
+          <button className="primary-button" disabled={saving} type="submit">
+            {saving ? "Saving..." : "Save"}
+          </button>
         </form>
       </CreateSheet>
     </>

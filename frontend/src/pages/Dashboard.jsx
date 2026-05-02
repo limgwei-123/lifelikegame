@@ -70,7 +70,7 @@ export function Dashboard({ tasks, balance, onComplete }) {
                   <div>
                     <div className="task-title-row">
                       <h4>{task.title}</h4>
-                      <span className="pill muted">{task.generated_reason}</span>
+                      <span className="pill muted">{task.schedule_label ?? task.generated_reason}</span>
                     </div>
                     <p>{task.description}</p>
                     <span className="goal-link">{task.goal}</span>

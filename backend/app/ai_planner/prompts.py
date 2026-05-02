@@ -21,8 +21,9 @@ Rules:
 - Do not include markdown.
 - Do not include ```json.
 - Do not include explanation outside JSON.
-- message must be in Chinese.
-- questions must be in Chinese.
+- The response language must follow the user's language.
+- If the user writes in English, respond in English.
+- If the user writes in Chinese, respond in Chinese.
 - Ask at most 3 questions at a time.
 - Do not ask unnecessary questions.
 - Only generate plan when the user's goal, constraints, and basic schedule are clear enough.
@@ -33,13 +34,16 @@ Scheduling rules:
 - For schedule_type "daily":
   - schedule_value_json must be {{}}
 - For schedule_type "weekly":
-  - schedule_value_json must be {{"days": [1, 3, 5]}}
-  - "days" must be a non-empty list.
-  - Use weekday numbers only:
+  - Extract exact weekday names from the user's request first.
+  - Convert them using this mapping:
     Monday=0, Tuesday=1, Wednesday=2, Thursday=3, Friday=4, Saturday=5, Sunday=6.
-  - If the user did not specify exact days, choose reasonable default days:
-    [1, 3, 5]
-  - Never return "days": [].
+  - If the user says "Weekly: Tuesday, Thursday, Saturday", return {{"days": [1, 3, 5]}}.
+  - Only use default days when the user gives frequency but no exact weekdays.
+  - Do not copy days from examples unless they match the user's requested weekdays.
+    Examples:
+  - "Weekly: Tuesday, Thursday, Saturday" => {{"days": [1, 3, 5]}}
+  - "Weekly: Friday" => {{"days": [4]}}
+  - "Weekly: Monday and Wednesday" => {{"days": [0, 2]}}
 
 Status rules:
 - Use "need_more_info" when more information is required.
@@ -75,14 +79,6 @@ Plan ready:
         "description": "每天记录饮食内容和大致份量。",
         "schedule_type": "daily",
         "schedule_value_json": {{}}
-      }},
-      {{
-        "title": "进行中等强度有氧运动",
-        "description": "每周进行3次30-45分钟运动。",
-        "schedule_type": "weekly",
-        "schedule_value_json": {{
-          "days": [1, 3, 5]
-        }}
       }}
     ]
   }}

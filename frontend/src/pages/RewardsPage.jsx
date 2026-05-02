@@ -9,30 +9,44 @@ export function RewardsPage({ rewards, balance, onDelete, onRedeem, onSave }) {
   const [activeStatus, setActiveStatus] = useState("available");
   const [isCreating, setIsCreating] = useState(false);
   const [editingReward, setEditingReward] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
   const availableRewards = rewards.filter((reward) => reward.status !== "redeemed");
   const redeemedRewards = rewards.filter((reward) => reward.status === "redeemed");
   const visibleRewards = activeStatus === "available" ? availableRewards : redeemedRewards;
 
   const openCreate = () => {
     setEditingReward(null);
+    setError("");
     setIsCreating(true);
   };
 
   const openEdit = (reward) => {
     setEditingReward(reward);
+    setError("");
     setIsCreating(true);
   };
 
   const saveReward = async (event) => {
     event.preventDefault();
+    if (saving) return;
+
     const data = Object.fromEntries(new FormData(event.currentTarget));
     const nextReward = {
       title: data.title,
       description: data.description,
       cost_points: Number(data.cost_points) || 0
     };
-    await onSave(editingReward, nextReward);
-    setIsCreating(false);
+    setSaving(true);
+    setError("");
+    try {
+      await onSave(editingReward, nextReward);
+      setIsCreating(false);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const renderRewards = (items, emptyText) => (
@@ -117,6 +131,7 @@ export function RewardsPage({ rewards, balance, onDelete, onRedeem, onSave }) {
         onClose={() => setIsCreating(false)}
       >
         <form className="form-grid" onSubmit={saveReward}>
+          {error ? <p className="empty-text">{error}</p> : null}
           <Field label="Title">
             <input defaultValue={editingReward?.title ?? ""} name="title" placeholder="Hotpot dinner" />
           </Field>
@@ -126,7 +141,9 @@ export function RewardsPage({ rewards, balance, onDelete, onRedeem, onSave }) {
           <Field label="Cost points">
             <input defaultValue={editingReward?.cost_points ?? ""} min="0" name="cost_points" placeholder="35" type="number" />
           </Field>
-          <button className="primary-button" type="submit">Save preview</button>
+          <button className="primary-button" disabled={saving} type="submit">
+            {saving ? "Saving..." : "Save"}
+          </button>
         </form>
       </CreateSheet>
     </>
