@@ -4,6 +4,10 @@ export function listTaskInstancesByDate(date) {
   return apiRequest(`/task_instances?date=${encodeURIComponent(date)}`);
 }
 
+export function listTaskInstancesByMonth(year, month) {
+  return apiRequest(`/task_instances/month?year=${encodeURIComponent(year)}&month=${encodeURIComponent(month)}`);
+}
+
 export function createTaskInstanceForDate(taskId, taskScheduleId, payload) {
   return apiRequest(`/tasks/${taskId}/task_schedules/${taskScheduleId}/task_instances`, {
     method: "POST",

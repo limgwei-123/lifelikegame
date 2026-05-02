@@ -61,6 +61,17 @@ class TaskInstanceService:
   def list_task_instances_by_date(self, user_id, date_instance: date):
     return self.task_instance_repo.list_by_user_id_and_date(user_id=user_id, date_instance = date_instance)
 
+  def list_task_instances_by_month(self, user_id, year: int, month: int):
+
+    start_date = date(year, month, 1)
+    if month == 12:
+        end_date = date(year + 1, 1, 1)
+    else:
+        end_date = date(year, month + 1, 1)
+
+
+    return self.task_instance_repo.list_by_user_id_between_date(user_id=user_id, start_date=start_date, end_date=end_date)
+
   def complete_task_instance(
       self,
       task_instance_id:int,
