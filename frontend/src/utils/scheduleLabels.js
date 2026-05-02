@@ -9,11 +9,18 @@ export function formatWeeklyDays(days) {
     .join(", ");
 }
 
-export function formatScheduleLabel(scheduleType, scheduleValue = {}) {
+export function formatSimpleScheduleLabel(scheduleType) {
   if (scheduleType === "daily") return "Daily";
-  if (scheduleType === "weekly") return `Weekly: ${formatWeeklyDays(scheduleValue.days)}`;
-  if (scheduleType === "monthly") return `Monthly: day ${scheduleValue.day ?? 1}`;
+  if (scheduleType === "weekly") return "Weekly";
+  if (scheduleType === "monthly") return "Monthly";
   if (scheduleType === "once") return "Once";
 
   return scheduleType || "Scheduled";
+}
+
+export function formatScheduleLabel(scheduleType, scheduleValue = {}) {
+  if (scheduleType === "weekly") return `Weekly: ${formatWeeklyDays(scheduleValue.days)}`;
+  if (scheduleType === "monthly") return `Monthly: day ${scheduleValue.day ?? 1}`;
+
+  return formatSimpleScheduleLabel(scheduleType);
 }

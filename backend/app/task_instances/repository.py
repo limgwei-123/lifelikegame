@@ -1,7 +1,8 @@
 from sqlalchemy.orm import Session
 
 from app.task_instances.models import TaskInstance
-
+from datetime import date
+from app.tasks.models import Task
 class TaskInstanceRepository:
   def __init__(self, db: Session):
     self.db = db
@@ -20,6 +21,12 @@ class TaskInstanceRepository:
 
   def get_by_task_id_and_date_instance(self, task_id, date_instance):
     return self.db.query(TaskInstance).filter(TaskInstance.task_id == task_id, TaskInstance.date_instance == date_instance).first()
+
+  def list_by_user_id_between_date(self, user_id,start_date, end_date):
+
+    return self.db.query(TaskInstance).filter(TaskInstance.user_id == user_id).filter(TaskInstance.date_instance >= start_date).filter(TaskInstance.date_instance <= end_date).order_by(TaskInstance.date_instance.asc()).all()
+
+
 
   def list_by_user_id_and_date(self, user_id, date_instance):
     return self.db.query(TaskInstance).filter(TaskInstance.user_id == user_id, TaskInstance.date_instance == date_instance).all()

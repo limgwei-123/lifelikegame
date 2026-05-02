@@ -35,3 +35,8 @@ def generate_task_instances_for_date(
 def complete_task_instance(task_instance_id, payload: CompleteTaskInstanceRequest, current_user = Depends(get_current_user), task_instance_service:TaskInstanceServiceInterface = Depends(get_task_instance_service)):
   task_instance = task_instance_service.complete_task_instance(task_instance_id=task_instance_id, user_id= current_user.id, completion_level= payload.completion_level)
   return task_instance
+
+@router.get("/task_instances/month",
+             response_model=list[TaskInstanceResponse], status_code=status.HTTP_200_OK)
+def list_task_instances_by_month(year:int, month:int, current_user = Depends(get_current_user), task_instance_service: TaskInstanceServiceInterface = Depends(get_task_instance_service)):
+  return task_instance_service.list_task_instances_by_month(user_id=current_user.id, year=year, month=month)

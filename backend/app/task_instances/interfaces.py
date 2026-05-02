@@ -18,3 +18,6 @@ class TaskInstanceServiceInterface(Protocol):
       completion_level: str
   ):
     ...
+
+  def list_task_instances_by_month(self, user_id, year, month):
+    ...

@@ -37,7 +37,7 @@ import { RewardsPage } from "./pages/RewardsPage.jsx";
 import { ScoringSchemesPage } from "./pages/ScoringSchemesPage.jsx";
 import { ProfilePage } from "./pages/ProfilePage.jsx";
 import { UpcomingPage } from "./pages/UpcomingPage.jsx";
-import { formatScheduleLabel } from "./utils/scheduleLabels.js";
+import { formatScheduleLabel, formatSimpleScheduleLabel } from "./utils/scheduleLabels.js";
 
 const tabs = [
   { id: "dashboard", label: "Dashboard" },
@@ -58,9 +58,8 @@ function mapInstance(instance, task, goal, schedule) {
     description: task?.description ?? "",
     goal: goal?.title ?? "Goal",
     generated_reason: instance.generated_reason || schedule?.schedule_type || "scheduled",
-    schedule_label: formatScheduleLabel(
+    schedule_label: formatSimpleScheduleLabel(
       schedule?.schedule_type ?? instance.generated_reason,
-      schedule?.schedule_value_json
     ),
     scoring_snapshot_json: scoring
   };
@@ -130,23 +129,6 @@ export default function App() {
 
   const taskTemplates = useMemo(() => {
     return tasks.map((task) => mapTask(task, goals, taskSchedules));
-  }, [goals, taskSchedules, tasks]);
-
-  const upcomingItems = useMemo(() => {
-    return taskSchedules
-      .filter((schedule) => schedule.schedule_type === "once")
-      .map((schedule) => {
-        const task = tasks.find((item) => item.id === schedule.task_id);
-        const goal = goals.find((item) => item.id === task?.goal_id);
-        return {
-          id: schedule.id,
-          title: task?.title ?? `Task #${schedule.task_id}`,
-          description: task?.description ?? "",
-          goal: goal?.title ?? "Goal",
-          schedule_date: schedule.start_date
-        };
-      })
-      .sort((left, right) => (left.schedule_date ?? "").localeCompare(right.schedule_date ?? ""));
   }, [goals, taskSchedules, tasks]);
 
   const loadProtectedData = useCallback(async () => {
@@ -322,7 +304,7 @@ export default function App() {
 
   const currentPage = {
     dashboard: <Dashboard tasks={dashboardTasks} balance={balance} onComplete={completeTask} />,
-    upcoming: <UpcomingPage items={upcomingItems} />,
+    upcoming: <UpcomingPage goals={goals} taskSchedules={taskSchedules} tasks={tasks} />,
     ai: <AiPlannerPage onConfirmPlan={handleConfirmAiPlan} />,
     goals: <GoalsPage goals={goals} onDelete={removeGoal} onSave={saveGoal} />,
     tasks: (
