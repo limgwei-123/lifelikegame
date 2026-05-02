@@ -4,7 +4,7 @@ from typing import Optional
 import uuid
 
 class CreateGoalRequest(BaseModel):
-  title: str | None
+  title: str
   start_date: date | None = None
   target_date: Optional[date] = None
   current_value: Optional[str] = None

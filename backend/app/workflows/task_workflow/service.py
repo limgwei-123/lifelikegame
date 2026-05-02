@@ -4,9 +4,10 @@ from app.goals.interfaces import GoalServiceInterface
 from app.task_instances.interfaces import TaskInstanceServiceInterface
 from app.scoring_schemes.interfaces import ScoringSchemeServiceInterface
 
-from app.workflows.task_workflow.schemas import CreateTaskWithScheduleRequest, TaskWithScheduleResponse
+from app.workflows.task_workflow.schemas import CreateTaskWithScheduleRequest, TaskWithScheduleResponse,ConfirmAiPlanRequest,GoalTaskSchduleResponse
 
 from app.shared.function import get_scoring_scheme_workflow
+from app.workflows.task_workflow.mappers import map_plan_to_goal_request,map_plan_to_task_with_schedule_requests
 
 class TaskWorkflowService:
   def __init__(self,
@@ -51,12 +52,35 @@ class TaskWorkflowService:
           date_instance=schedule.start_date
         )
 
-
-
       task.schedule = schedule
 
     return TaskWithScheduleResponse(
       task=task,
       schedule=schedule,
       task_instance=task_instance
+    )
+
+  def create_from_ai_plan(self, user_id, payload:ConfirmAiPlanRequest)->GoalTaskSchduleResponse:
+
+
+    goal_request = map_plan_to_goal_request(payload.plan)
+
+    goal = self.goal_service.create_goal(user_id=user_id, payload=goal_request)
+
+    task_with_schedule_requests = map_plan_to_task_with_schedule_requests(payload.plan)
+
+    task_with_schedule_list=[]
+
+    for task_payload in task_with_schedule_requests:
+      task_schedule = self.create_task_with_schedule(
+          goal_id=goal.id,
+          user_id=user_id,
+          payload=task_payload,
+      )
+
+      task_with_schedule_list.append(task_schedule)
+
+    return GoalTaskSchduleResponse(
+      goal=goal,
+      task_with_schedule_list=task_with_schedule_list
     )
