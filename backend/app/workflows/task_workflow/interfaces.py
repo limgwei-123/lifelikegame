@@ -1,4 +1,4 @@
-from app.workflows.task_workflow.schemas import CreateTaskScheduleRequest, TaskScheduleResponse
+from app.workflows.task_workflow.schemas import CreateTaskScheduleRequest, TaskScheduleResponse,ConfirmAiPlanRequest, GoalTaskSchduleResponse
 from typing import Protocol
 
 class TaskWorkflowServiceInterface(Protocol):
@@ -8,4 +8,7 @@ class TaskWorkflowServiceInterface(Protocol):
       user_id: str,
       payload: CreateTaskScheduleRequest
   )->TaskScheduleResponse:
+    ...
+
+  def create_from_ai_plan(self, user_id, payload:ConfirmAiPlanRequest)->GoalTaskSchduleResponse:
     ...

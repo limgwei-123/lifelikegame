@@ -10,6 +10,8 @@ from app.workflows.redemption_workflow.interfaces import RedemptionWorkflowServi
 from app.workflows.task_workflow.schemas import (
     CreateTaskWithScheduleRequest,
     TaskWithScheduleResponse,
+    GoalTaskSchduleResponse,
+    ConfirmAiPlanRequest
 )
 
 from app.workflows.redemption_workflow.schemas import RedeemRewardRequest,RedeemRewardResponse
@@ -46,3 +48,16 @@ def redemption_workflow(
         reward_id=reward_id,
         user_id=current_user.id
     )
+
+
+@router.post(
+    "/ai/confirm",
+    response_model=GoalTaskSchduleResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def confirm_ai_plan(
+    payload: ConfirmAiPlanRequest,
+    current_user=Depends(get_current_user),
+    task_workflow_service: TaskWorkflowServiceInterface = Depends(get_task_workflow_service),
+                    )->GoalTaskSchduleResponse:
+    return task_workflow_service.create_from_ai_plan(user_id=current_user.id, payload=payload)
