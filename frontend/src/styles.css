@@ -1163,6 +1163,23 @@ button {
   padding-right: 4px;
 }
 
+.plan-edit-card {
+  display: grid;
+  gap: 14px;
+}
+
+.plan-edit-card .card-title-bar {
+  margin-bottom: 0;
+}
+
+.plan-day-picker {
+  align-self: end;
+}
+
+.plan-edit-card .pill {
+  justify-self: start;
+}
+
 .primary-button:disabled,
 .secondary-button:disabled {
   cursor: not-allowed;

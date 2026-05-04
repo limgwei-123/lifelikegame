@@ -5,17 +5,42 @@ import { Field } from "../components/Field.jsx";
 import { PageHeader } from "../components/PageHeader.jsx";
 import { formatScheduleLabel } from "../utils/scheduleLabels.js";
 
+const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+function normalizeTask(task = {}) {
+  const scheduleType = task.schedule_type === "daily" ? "daily" : "weekly";
+  const scheduleValue = task.schedule_value_json ?? {};
+
+  return {
+    title: task.title ?? "",
+    description: task.description ?? "",
+    schedule_type: scheduleType,
+    schedule_value_json:
+      scheduleType === "weekly"
+        ? { days: Array.isArray(scheduleValue.days) && scheduleValue.days.length ? scheduleValue.days : [0, 2, 4] }
+        : {}
+  };
+}
+
+function normalizePlan(plan) {
+  return {
+    goal_title: plan?.goal_title ?? "",
+    tasks: (plan?.tasks?.length ? plan.tasks : [normalizeTask()]).map(normalizeTask)
+  };
+}
+
 export function AiPlannerPage({ onConfirmPlan }) {
   const [prompt, setPrompt] = useState("");
   const [conversationHistory, setConversationHistory] = useState([]);
   const [messages, setMessages] = useState([]);
   const [readyPlan, setReadyPlan] = useState(null);
+  const [editablePlan, setEditablePlan] = useState(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const planTaskCount = useMemo(() => readyPlan?.tasks?.length ?? 0, [readyPlan]);
+  const planTaskCount = useMemo(() => editablePlan?.tasks?.length ?? 0, [editablePlan]);
 
   const submitPrompt = async (event) => {
     event.preventDefault();
@@ -45,7 +70,9 @@ export function AiPlannerPage({ onConfirmPlan }) {
       ]);
 
       if (response.status === "plan_ready" && response.plan) {
-        setReadyPlan(response.plan);
+        const nextPlan = normalizePlan(response.plan);
+        setReadyPlan(nextPlan);
+        setEditablePlan(nextPlan);
         setConfirmOpen(true);
       }
     } catch (err) {
@@ -55,15 +82,103 @@ export function AiPlannerPage({ onConfirmPlan }) {
     }
   };
 
+  const updateGoalTitle = (value) => {
+    setEditablePlan((current) => ({ ...current, goal_title: value }));
+  };
+
+  const updateTask = (index, patch) => {
+    setEditablePlan((current) => ({
+      ...current,
+      tasks: current.tasks.map((task, taskIndex) => (
+        taskIndex === index ? normalizeTask({ ...task, ...patch }) : task
+      ))
+    }));
+  };
+
+  const updateTaskScheduleType = (index, scheduleType) => {
+    updateTask(index, {
+      schedule_type: scheduleType,
+      schedule_value_json: scheduleType === "weekly" ? { days: [0, 2, 4] } : {}
+    });
+  };
+
+  const toggleWeeklyDay = (taskIndex, dayIndex) => {
+    setEditablePlan((current) => ({
+      ...current,
+      tasks: current.tasks.map((task, index) => {
+        if (index !== taskIndex) return task;
+
+        const currentDays = task.schedule_value_json?.days ?? [];
+        const nextDays = currentDays.includes(dayIndex)
+          ? currentDays.filter((day) => day !== dayIndex)
+          : [...currentDays, dayIndex].sort((left, right) => left - right);
+
+        return {
+          ...task,
+          schedule_value_json: { days: nextDays }
+        };
+      })
+    }));
+  };
+
+  const addTask = () => {
+    setEditablePlan((current) => ({
+      ...current,
+      tasks: [
+        ...current.tasks,
+        normalizeTask({
+          title: "New task",
+          description: "",
+          schedule_type: "weekly",
+          schedule_value_json: { days: [0, 2, 4] }
+        })
+      ]
+    }));
+  };
+
+  const removeTask = (index) => {
+    setEditablePlan((current) => ({
+      ...current,
+      tasks: current.tasks.filter((_, taskIndex) => taskIndex !== index)
+    }));
+  };
+
   const confirmPlan = async () => {
-    if (!readyPlan || saving) return;
+    if (!editablePlan || saving) return;
+
+    const nextPlan = normalizePlan(editablePlan);
+    if (!nextPlan.goal_title.trim()) {
+      setError("Goal title is required.");
+      return;
+    }
+    if (nextPlan.tasks.length === 0) {
+      setError("At least one task is required.");
+      return;
+    }
+    if (nextPlan.tasks.some((task) => !task.title.trim())) {
+      setError("Every task needs a title.");
+      return;
+    }
+    if (nextPlan.tasks.some((task) => task.schedule_type === "weekly" && task.schedule_value_json.days.length === 0)) {
+      setError("Weekly tasks need at least one day selected.");
+      return;
+    }
 
     setSaving(true);
     setError("");
     try {
-      await onConfirmPlan(readyPlan);
+      await onConfirmPlan({
+        ...nextPlan,
+        goal_title: nextPlan.goal_title.trim(),
+        tasks: nextPlan.tasks.map((task) => ({
+          ...task,
+          title: task.title.trim(),
+          description: task.description?.trim() || null
+        }))
+      });
       setConfirmOpen(false);
       setReadyPlan(null);
+      setEditablePlan(null);
       setMessages([]);
       setConversationHistory([]);
     } catch (err) {
@@ -84,7 +199,14 @@ export function AiPlannerPage({ onConfirmPlan }) {
               <p className="eyebrow">Assistant</p>
               <h3>Plan builder</h3>
             </div>
-            {readyPlan ? <span className="pill">Plan ready</span> : null}
+            {readyPlan ? (
+              <div className="header-actions">
+                <span className="pill">Plan ready</span>
+                <button className="secondary-button" onClick={() => setConfirmOpen(true)} type="button">
+                  Review plan
+                </button>
+              </div>
+            ) : null}
           </div>
 
           {error ? <p className="empty-text">{error}</p> : null}
@@ -136,30 +258,86 @@ export function AiPlannerPage({ onConfirmPlan }) {
         }}
       >
         <div className="plan-preview">
-          <div className="plain-card">
-            <p className="eyebrow">Plan ready</p>
-            <h4>{readyPlan?.goal_title}</h4>
-            <p>{planTaskCount} tasks will be created from this plan.</p>
+          <div className="form-grid">
+            <Field label="Goal title">
+              <input
+                onChange={(event) => updateGoalTitle(event.target.value)}
+                placeholder="Build consistent fitness"
+                value={editablePlan?.goal_title ?? ""}
+              />
+            </Field>
+            <p className="empty-text">{planTaskCount} tasks will be created from this plan.</p>
           </div>
 
-          <div className="task-list">
-            {readyPlan?.tasks?.map((task, index) => (
-              <article className="task-card" key={`${task.title}-${index}`}>
-                <div className="task-main">
-                  <div className="check-dot" aria-hidden="true" />
+          <div className="task-list plan-edit-list">
+            {editablePlan?.tasks?.map((task, index) => (
+              <article className="task-card plan-edit-card" key={`plan-task-${index}`}>
+                <div className="card-title-bar">
                   <div>
-                    <div className="task-title-row">
-                      <h4>{task.title}</h4>
-                      <span className="pill muted">
-                        {formatScheduleLabel(task.schedule_type, task.schedule_value_json)}
-                      </span>
-                    </div>
-                    <p>{task.description}</p>
+                    <p className="eyebrow">Task {index + 1}</p>
+                    <h4>{task.title || "Untitled task"}</h4>
                   </div>
+                  <button
+                    className="danger-button"
+                    disabled={saving || editablePlan.tasks.length <= 1}
+                    onClick={() => removeTask(index)}
+                    type="button"
+                  >
+                    Remove
+                  </button>
+                </div>
+
+                <div className="form-grid two-column">
+                  <Field label="Task title">
+                    <input
+                      onChange={(event) => updateTask(index, { title: event.target.value })}
+                      value={task.title}
+                    />
+                  </Field>
+                  <Field label="Schedule">
+                    <select
+                      onChange={(event) => updateTaskScheduleType(index, event.target.value)}
+                      value={task.schedule_type}
+                    >
+                      <option value="daily">Daily</option>
+                      <option value="weekly">Weekly</option>
+                    </select>
+                  </Field>
+                  <Field label="Description">
+                    <textarea
+                      onChange={(event) => updateTask(index, { description: event.target.value })}
+                      rows="3"
+                      value={task.description ?? ""}
+                    />
+                  </Field>
+
+                  {task.schedule_type === "weekly" ? (
+                    <div className="day-picker plan-day-picker">
+                      {days.map((day, dayIndex) => (
+                        <label key={day}>
+                          <input
+                            checked={task.schedule_value_json?.days?.includes(dayIndex) ?? false}
+                            onChange={() => toggleWeeklyDay(index, dayIndex)}
+                            type="checkbox"
+                            value={dayIndex}
+                          />
+                          <span>{day.slice(0, 3)}</span>
+                        </label>
+                      ))}
+                    </div>
+                  ) : null}
+
+                  <span className="pill muted">
+                    {formatScheduleLabel(task.schedule_type, task.schedule_value_json)}
+                  </span>
                 </div>
               </article>
             ))}
           </div>
+
+          <button className="secondary-button" disabled={saving} onClick={addTask} type="button">
+            Add task
+          </button>
 
           <div className="confirm-actions">
             <button className="secondary-button" disabled={saving} onClick={() => setConfirmOpen(false)} type="button">

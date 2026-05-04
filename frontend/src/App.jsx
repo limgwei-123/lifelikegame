@@ -166,6 +166,10 @@ export default function App() {
       setBalance(balanceData.balance ?? 0);
       setScoringSchemes(scoringList);
       setTaskInstances(instanceList);
+
+      if (goalList.length === 0 || taskList.length === 0) {
+        setActiveTab("ai");
+      }
     } catch (err) {
       setError(err.message);
       if (err.message.toLowerCase().includes("not authenticated")) {
