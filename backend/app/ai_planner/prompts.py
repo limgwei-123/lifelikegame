@@ -38,6 +38,7 @@ Scheduling rules:
   - Convert them using this mapping:
     Monday=0, Tuesday=1, Wednesday=2, Thursday=3, Friday=4, Saturday=5, Sunday=6.
   - If the user says "Weekly: Tuesday, Thursday, Saturday", return {{"days": [1, 3, 5]}}.
+  - If customers saying weekly, can ask them for prefer days first
   - Only use default days when the user gives frequency but no exact weekdays.
   - Do not copy days from examples unless they match the user's requested weekdays.
     Examples:
