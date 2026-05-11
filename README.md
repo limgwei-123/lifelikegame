@@ -233,3 +233,9 @@ The backend then creates the goal, tasks, and task schedules from the AI-generat
 - Some update and delete routes use `POST /resource/{id}` or `POST /resource/{id}/delete` instead of traditional REST `PUT/PATCH/DELETE` routes.
 - AI Planner requires `AI_API_KEY` and `AI_MODEL`; without them, AI generation will not work.
 - `DATABASE_URL` is required for backend startup. The app raises an error if it is missing.
+
+
+## Demo Account
+
+Email: user@example.com
+Password: string
