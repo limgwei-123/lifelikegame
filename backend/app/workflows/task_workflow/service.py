@@ -28,6 +28,7 @@ class TaskWorkflowService:
 
     scoring_scheme = get_scoring_scheme_workflow(scoring_scheme_id=payload.task.scoring_scheme_id,scoring_scheme_service=self.scoring_scheme_service)
 
+
     payload.task.scoring_scheme_id = scoring_scheme.id
     payload.task.scoring_scheme_json = scoring_scheme.levels_json
 

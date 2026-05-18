@@ -85,6 +85,13 @@ export function AiPlannerPage({ onConfirmPlan, scoringSchemes = [] }) {
     }
   };
 
+  const submitPromptOnEnter = (event) => {
+    if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return;
+
+    event.preventDefault();
+    event.currentTarget.form?.requestSubmit();
+  };
+
   const updateGoalTitle = (value) => {
     setEditablePlan((current) => ({ ...current, goal_title: value }));
   };
@@ -242,6 +249,7 @@ export function AiPlannerPage({ onConfirmPlan, scoringSchemes = [] }) {
               <textarea
                 name="prompt"
                 onChange={(event) => setPrompt(event.target.value)}
+                onKeyDown={submitPromptOnEnter}
                 placeholder="I want to build a workout routine..."
                 rows="4"
                 value={prompt}

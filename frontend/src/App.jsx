@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { login as loginRequest, signup as signupRequest } from "./api/authApi.js";
-import { clearToken, getToken, setToken } from "./api/client.js";
+import { ApiError, UNAUTHORIZED_EVENT, clearToken, getToken, setToken } from "./api/client.js";
 import {
   createGoal,
   deleteGoal as deleteGoalRequest,
@@ -118,6 +118,14 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const handleUnauthorized = useCallback(() => {
+    clearToken();
+    setIsAuthed(false);
+    setProfile(null);
+    setActiveTab("dashboard");
+    setError("");
+  }, []);
+
   const dashboardTasks = useMemo(() => {
     return taskInstances.map((instance) => {
       const task = tasks.find((item) => item.id === instance.task_id);
@@ -171,21 +179,26 @@ export default function App() {
         setActiveTab("ai");
       }
     } catch (err) {
-      setError(err.message);
-      if (err.message.toLowerCase().includes("not authenticated")) {
-        clearToken();
-        setIsAuthed(false);
+      if (err instanceof ApiError && err.status === 401) {
+        handleUnauthorized();
+        return;
       }
+      setError(err.message);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [handleUnauthorized]);
 
   useEffect(() => {
     if (isAuthed) {
       loadProtectedData();
     }
   }, [isAuthed, loadProtectedData]);
+
+  useEffect(() => {
+    window.addEventListener(UNAUTHORIZED_EVENT, handleUnauthorized);
+    return () => window.removeEventListener(UNAUTHORIZED_EVENT, handleUnauthorized);
+  }, [handleUnauthorized]);
 
   const handleAuth = async ({ mode, email, password }) => {
     if (mode === "signup") {

@@ -6,9 +6,8 @@ from app.task_instances.interfaces import TaskInstanceServiceInterface
 
 def get_scoring_scheme_workflow(scoring_scheme_id,scoring_scheme_service: ScoringSchemeServiceInterface):
 
-  scoring_scheme = scoring_scheme_service.get_scoring_scheme_by_id(scoring_scheme_id)
-  if not scoring_scheme:
-    scoring_scheme_id = SCORING_SCHME_ID.DEFAULT
+  if not scoring_scheme_id or scoring_scheme_id==0:
+     scoring_scheme_id = SCORING_SCHME_ID.DEFAULT
 
   scoring_scheme = scoring_scheme_service.get_scoring_scheme_by_id(scoring_scheme_id)
   return scoring_scheme
