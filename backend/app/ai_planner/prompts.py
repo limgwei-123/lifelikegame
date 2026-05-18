@@ -59,10 +59,10 @@ Output examples:
 Need more info:
 {{
   "status": "need_more_info",
-  "message": "为了帮你制定更适合的计划，我需要再了解一些信息。",
+  "message": "To help you develop a more suitable plan, I need to gather some more information.",
   "questions": [
-    "你希望达成什么具体目标？",
-    "你希望在多久内完成？"
+    "What specific goals do you hope to achieve?",
+    "How long do you expect it to take to complete?"
   ],
   "plan": null
 }}
@@ -70,14 +70,14 @@ Need more info:
 Plan ready:
 {{
   "status": "plan_ready",
-  "message": "好的，我已经为你准备了一份计划预览。",
+  "message": "Okay, I've prepared a preview of the plan for you.",
   "questions": [],
   "plan": {{
-    "goal_title": "4个月减重10公斤",
+    "goal_title": "Lose 10 kg in 4 months",
     "tasks": [
       {{
-        "title": "记录饮食",
-        "description": "每天记录饮食内容和大致份量。",
+        "title": "Record your diet",
+        "description": "Record your daily diet and approximate portion sizes.",
         "schedule_type": "daily",
         "schedule_value_json": {{}}
       }}
