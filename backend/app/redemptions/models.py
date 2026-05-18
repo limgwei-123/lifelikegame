@@ -46,6 +46,11 @@ class Redemption(Base):
     default=datetime.now
   )
 
+  deleted_at: Mapped[datetime | None] = mapped_column(
+         DateTime(timezone=True),
+         nullable=True,
+      )
+
   user: Mapped["User"] = relationship("User", back_populates="redemptions")
   reward: Mapped["Reward"] = relationship("Reward",
                                           back_populates="redemptions")

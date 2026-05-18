@@ -46,11 +46,16 @@ class User(Base):
     default=datetime.now
   )
 
-  goals: Mapped[list["Goal"]] = relationship("Goal", back_populates="user")
-  tasks: Mapped[list["Task"]] = relationship("Task", back_populates="user")
-  task_schedules: Mapped[list["TaskSchedule"]] = relationship("TaskSchedule", back_populates="user")
-  task_instances: Mapped[list["TaskInstance"]] = relationship("TaskInstance", back_populates="user")
-  scoring_schemes: Mapped[list["ScoringScheme"]] = relationship("ScoringScheme", back_populates="user")
-  point_ledgers: Mapped[list["PointLedger"]] = relationship("PointLedger", back_populates="user")
+  deleted_at: Mapped[datetime | None] = mapped_column(
+         DateTime(timezone=True),
+         nullable=True,
+      )
+
+  goals: Mapped[list["Goal"]] = relationship("Goal", back_populates="user", cascade="all, delete-orphan")
+  tasks: Mapped[list["Task"]] = relationship("Task", back_populates="user", cascade="all, delete-orphan")
+  task_schedules: Mapped[list["TaskSchedule"]] = relationship("TaskSchedule", back_populates="user", cascade="all, delete-orphan")
+  task_instances: Mapped[list["TaskInstance"]] = relationship("TaskInstance", back_populates="user", cascade="all, delete-orphan")
+  scoring_schemes: Mapped[list["ScoringScheme"]] = relationship("ScoringScheme", back_populates="user", cascade="all, delete-orphan")
+  point_ledgers: Mapped[list["PointLedger"]] = relationship("PointLedger", back_populates="user", cascade="all, delete-orphan")
   rewards: Mapped[list["Reward"]] = relationship("Reward", back_populates="user")
-  redemptions: Mapped[list["Redemption"]] = relationship("Redemption", back_populates="user")
+  redemptions: Mapped[list["Redemption"]] = relationship("Redemption", back_populates="user", cascade="all, delete-orphan")

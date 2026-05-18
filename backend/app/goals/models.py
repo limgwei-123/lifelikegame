@@ -56,6 +56,11 @@ class Goal(Base):
      default=datetime.now
   )
 
+  deleted_at: Mapped[datetime | None] = mapped_column(
+         DateTime(timezone=True),
+         nullable=True,
+      )
+
 
   user: Mapped["User"] = relationship("User",back_populates="goals")
   tasks = relationship("Task", back_populates="goal", cascade="all, delete-orphan")

@@ -3,17 +3,17 @@ import { generateAiPlan } from "../api/aiPlannerApi.js";
 import { CreateSheet } from "../components/CreateSheet.jsx";
 import { Field } from "../components/Field.jsx";
 import { PageHeader } from "../components/PageHeader.jsx";
-import { formatScheduleLabel } from "../utils/scheduleLabels.js";
 
 const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
-function normalizeTask(task = {}) {
+function normalizeTask(task = {}, defaultScoringSchemeId = "") {
   const scheduleType = task.schedule_type === "daily" ? "daily" : "weekly";
   const scheduleValue = task.schedule_value_json ?? {};
 
   return {
     title: task.title ?? "",
     description: task.description ?? "",
+    scoring_scheme_id: task.scoring_scheme_id != null ? String(task.scoring_scheme_id) : defaultScoringSchemeId,
     schedule_type: scheduleType,
     schedule_value_json:
       scheduleType === "weekly"
@@ -22,14 +22,16 @@ function normalizeTask(task = {}) {
   };
 }
 
-function normalizePlan(plan) {
+function normalizePlan(plan, defaultScoringSchemeId = "") {
   return {
     goal_title: plan?.goal_title ?? "",
-    tasks: (plan?.tasks?.length ? plan.tasks : [normalizeTask()]).map(normalizeTask)
+    tasks: (plan?.tasks?.length ? plan.tasks : [normalizeTask({}, defaultScoringSchemeId)]).map((task) => (
+      normalizeTask(task, defaultScoringSchemeId)
+    ))
   };
 }
 
-export function AiPlannerPage({ onConfirmPlan }) {
+export function AiPlannerPage({ onConfirmPlan, scoringSchemes = [] }) {
   const [prompt, setPrompt] = useState("");
   const [conversationHistory, setConversationHistory] = useState([]);
   const [messages, setMessages] = useState([]);
@@ -40,6 +42,7 @@ export function AiPlannerPage({ onConfirmPlan }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  const defaultScoringSchemeId = scoringSchemes[0]?.id != null ? String(scoringSchemes[0].id) : "";
   const planTaskCount = useMemo(() => editablePlan?.tasks?.length ?? 0, [editablePlan]);
 
   const submitPrompt = async (event) => {
@@ -70,7 +73,7 @@ export function AiPlannerPage({ onConfirmPlan }) {
       ]);
 
       if (response.status === "plan_ready" && response.plan) {
-        const nextPlan = normalizePlan(response.plan);
+        const nextPlan = normalizePlan(response.plan, defaultScoringSchemeId);
         setReadyPlan(nextPlan);
         setEditablePlan(nextPlan);
         setConfirmOpen(true);
@@ -90,7 +93,7 @@ export function AiPlannerPage({ onConfirmPlan }) {
     setEditablePlan((current) => ({
       ...current,
       tasks: current.tasks.map((task, taskIndex) => (
-        taskIndex === index ? normalizeTask({ ...task, ...patch }) : task
+        taskIndex === index ? normalizeTask({ ...task, ...patch }, defaultScoringSchemeId) : task
       ))
     }));
   };
@@ -129,9 +132,10 @@ export function AiPlannerPage({ onConfirmPlan }) {
         normalizeTask({
           title: "New task",
           description: "",
+          scoring_scheme_id: defaultScoringSchemeId,
           schedule_type: "weekly",
           schedule_value_json: { days: [0, 2, 4] }
-        })
+        }, defaultScoringSchemeId)
       ]
     }));
   };
@@ -146,7 +150,7 @@ export function AiPlannerPage({ onConfirmPlan }) {
   const confirmPlan = async () => {
     if (!editablePlan || saving) return;
 
-    const nextPlan = normalizePlan(editablePlan);
+    const nextPlan = normalizePlan(editablePlan, defaultScoringSchemeId);
     if (!nextPlan.goal_title.trim()) {
       setError("Goal title is required.");
       return;
@@ -173,7 +177,8 @@ export function AiPlannerPage({ onConfirmPlan }) {
         tasks: nextPlan.tasks.map((task) => ({
           ...task,
           title: task.title.trim(),
-          description: task.description?.trim() || null
+          description: task.description?.trim() || null,
+          scoring_scheme_id: task.scoring_scheme_id ? Number(task.scoring_scheme_id) : null
         }))
       });
       setConfirmOpen(false);
@@ -303,6 +308,20 @@ export function AiPlannerPage({ onConfirmPlan }) {
                       <option value="weekly">Weekly</option>
                     </select>
                   </Field>
+                  <Field label="Scoring scheme">
+                    <select
+                      onChange={(event) => updateTask(index, { scoring_scheme_id: event.target.value })}
+                      value={task.scoring_scheme_id ?? ""}
+                    >
+                      {scoringSchemes.length ? (
+                        scoringSchemes.map((scheme) => (
+                          <option key={scheme.id} value={scheme.id}>{scheme.title}</option>
+                        ))
+                      ) : (
+                        <option value="">DEFAULT</option>
+                      )}
+                    </select>
+                  </Field>
                   <Field label="Description">
                     <textarea
                       onChange={(event) => updateTask(index, { description: event.target.value })}
@@ -327,9 +346,6 @@ export function AiPlannerPage({ onConfirmPlan }) {
                     </div>
                   ) : null}
 
-                  <span className="pill muted">
-                    {formatScheduleLabel(task.schedule_type, task.schedule_value_json)}
-                  </span>
                 </div>
               </article>
             ))}

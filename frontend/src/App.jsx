@@ -309,7 +309,7 @@ export default function App() {
   const currentPage = {
     dashboard: <Dashboard tasks={dashboardTasks} balance={balance} onComplete={completeTask} />,
     upcoming: <UpcomingPage goals={goals} taskSchedules={taskSchedules} tasks={tasks} />,
-    ai: <AiPlannerPage onConfirmPlan={handleConfirmAiPlan} />,
+    ai: <AiPlannerPage onConfirmPlan={handleConfirmAiPlan} scoringSchemes={scoringSchemes} />,
     goals: <GoalsPage goals={goals} onDelete={removeGoal} onSave={saveGoal} />,
     tasks: (
       <TasksPage

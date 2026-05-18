@@ -64,4 +64,9 @@ class PointLedger(Base):
     default=datetime.now
   )
 
+  deleted_at: Mapped[datetime | None] = mapped_column(
+         DateTime(timezone=True),
+         nullable=True,
+      )
+
   user: Mapped["User"] = relationship("User", back_populates="point_ledgers")

@@ -80,5 +80,5 @@ class Task(Base):
     back_populates="tasks"
    )
 
-   task_schedules: Mapped[list["TaskSchedule"]] = relationship("TaskSchedule", back_populates="task")
-   task_instances: Mapped[list["TaskInstance"]] = relationship("TaskInstance", back_populates="task")
+   task_schedules: Mapped[list["TaskSchedule"]] = relationship("TaskSchedule", back_populates="task", cascade="all, delete-orphan")
+   task_instances: Mapped[list["TaskInstance"]] = relationship("TaskInstance", back_populates="task", cascade="all, delete-orphan")

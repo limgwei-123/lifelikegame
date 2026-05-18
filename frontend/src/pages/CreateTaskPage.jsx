@@ -120,7 +120,7 @@ export function TasksPage({ goals, onDelete, onSave, scoringSchemes, tasks }) {
           </Field>
           <Field label="Scoring scheme">
             <select defaultValue={editingTask?.scoring_scheme_id ?? scoringSchemes[0]?.id ?? ""} name="scoring_scheme_id">
-              <option value="">Default</option>
+              <option value="">DEFAULT</option>
               {scoringSchemes.map((scheme) => (
                 <option key={scheme.id} value={scheme.id}>{scheme.title}</option>
               ))}

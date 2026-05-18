@@ -59,5 +59,10 @@ class Reward(Base):
     onupdate=datetime.now
   )
 
+  deleted_at: Mapped[datetime | None] = mapped_column(
+         DateTime(timezone=True),
+         nullable=True,
+      )
+
   user: Mapped["User"] = relationship("User", back_populates="rewards")
   redemptions: Mapped[list["Redemption"]] = relationship("Redemption", back_populates="reward")

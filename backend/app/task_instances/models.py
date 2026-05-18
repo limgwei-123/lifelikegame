@@ -34,7 +34,7 @@ class TaskInstance(Base):
 
   #只是作为记录
   task_schedule_id: Mapped[int] = mapped_column(
-    ForeignKey("task_schedules.id"),
+    ForeignKey("task_schedules.id", ondelete="CASCADE"),
     nullable=False,
     index=True
   )
