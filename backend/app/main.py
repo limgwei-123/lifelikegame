@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
+import os
 from app.db import db_ping
 from app.routers.public import router as public_router
 from app.routers.protected import router as protected_router
@@ -19,17 +19,24 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+frontend_url = os.getenv("FRONTEND_URL")
+
 register_exception_handlers(app)
 
-app.add_middleware(
-  CORSMiddleware,
-  allow_origins=[
+origins = [
     "http://localhost:5173",
-    "http://127.0.0.1:5173",
-  ],
-  allow_credentials=True,
-  allow_methods=["*"],
-  allow_headers=["*"],
+    "http://localhost:3000",
+]
+
+if frontend_url:
+    origins.append(frontend_url)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(public_router)
