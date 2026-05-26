@@ -1,0 +1,133 @@
+import os
+from typing import Any
+
+from google import genai
+from google.genai import types
+
+from app.ai_planner.extract_json import extract_json
+from app.ai_planner.prompts import build_generate_plan_prompt
+from app.ai_planner.schemas import AiPlannerResponse, ConversationMessage
+from app.ai_planner.state import AiPlannerGraphState
+
+
+api_key = os.getenv("AI_API_KEY")
+model = os.getenv("AI_MODEL")
+
+
+def call_ai(prompt: str) -> str:
+    client = genai.Client(api_key=api_key)
+
+    config = types.GenerateContentConfig(
+        # tools=[types.Tool(google_search=types.GoogleSearch())]
+    )
+
+    response = client.models.generate_content(
+        model=model,
+        contents=prompt,
+        config=config,
+    )
+
+    return response.text
+
+
+def generate_ai_response_node(state: AiPlannerGraphState) -> dict[str, Any]:
+    payload = state["payload"]
+
+    prompt = build_generate_plan_prompt(
+        user_prompt=payload.user_prompt,
+        conversation_history=payload.conversation_history,
+    )
+
+    raw_result = call_ai(prompt)
+    data = extract_json(raw_result)
+
+    return {
+        "raw_result": raw_result,
+        "data": data,
+        "status": data.get("status"),
+        "message": data.get("message", ""),
+        "questions": data.get("questions", []),
+        "plan": data.get("plan"),
+    }
+
+
+def normalize_schedule_node(state: AiPlannerGraphState) -> dict[str, Any]:
+    data = state["data"]
+    plan = data.get("plan")
+
+    if not plan:
+        return {
+            "data": data,
+            "plan": None,
+        }
+
+    for task in plan.get("tasks", []):
+        schedule_type = task.get("schedule_type")
+        schedule_value = task.get("schedule_value_json") or {}
+
+        if schedule_type == "daily":
+            task["schedule_value_json"] = {}
+
+        if schedule_type == "weekly":
+            days = schedule_value.get("days") if isinstance(schedule_value, dict) else None
+
+            if not days:
+                task["schedule_value_json"] = {"days": [1, 3, 5]}
+
+    data["plan"] = plan
+
+    return {
+        "data": data,
+        "plan": plan,
+    }
+
+
+def build_response_node(state: AiPlannerGraphState) -> dict[str, Any]:
+    payload = state["payload"]
+    data = state["data"]
+
+    ai_response = AiPlannerResponse.model_validate(data)
+
+    updated_history = build_updated_history(
+        old_history=payload.conversation_history,
+        user_prompt=payload.user_prompt,
+        ai_response=ai_response,
+    )
+
+    ai_response.conversation_history = updated_history
+
+    return {
+        "ai_response": ai_response,
+    }
+
+
+def build_updated_history(
+    old_history: list[ConversationMessage],
+    user_prompt: str,
+    ai_response: AiPlannerResponse,
+) -> list[ConversationMessage]:
+    assistant_content = ai_response.message
+
+    if ai_response.questions:
+        questions_text = "\n".join(
+            f"{index + 1}. {question}"
+            for index, question in enumerate(ai_response.questions)
+        )
+        assistant_content += f"\nQuestion: \n{questions_text}"
+
+    if ai_response.plan:
+        task_titles = "\n".join(
+            f"{index + 1}. {task.title}"
+            for index, task in enumerate(ai_response.plan.tasks)
+        )
+        assistant_content += (
+            f"\nPlan Preview:\n"
+            f"Target：{ai_response.plan.goal_title}\n"
+            f"Task:\n{task_titles}"
+        )
+
+    return [
+        *old_history,
+        ConversationMessage(role="user", content=user_prompt),
+        ConversationMessage(role="assistant", content=assistant_content),
+    ]

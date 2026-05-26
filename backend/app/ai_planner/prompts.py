@@ -49,10 +49,8 @@ Scheduling rules:
 Status rules:
 - Use "need_more_info" when more information is required.
 - Use "plan_ready" when a plan preview is ready for the user to review.
-- Use "start_generate" only when the user clearly confirms they want to create/save this plan.
 - If status is "need_more_info", plan must be null.
 - If status is "plan_ready", questions must be an empty list.
-- If status is "start_generate", questions must be an empty list.
 
 Output examples:
 
