@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Field } from "../components/Field.jsx";
 
-export function AuthPage({ onSubmit }) {
+export function AuthPage({ externalError = "", onSubmit }) {
   const [mode, setMode] = useState("login");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -67,7 +67,7 @@ export function AuthPage({ onSubmit }) {
               type="password"
             />
           </Field>
-          {error ? <p className="empty-text">{error}</p> : null}
+          {error || externalError ? <p className="empty-text">{error || externalError}</p> : null}
           <button className="primary-button" disabled={saving} type="submit">
             {saving ? "Working..." : isLogin ? "Login" : "Create account"}
           </button>

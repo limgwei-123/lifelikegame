@@ -104,7 +104,10 @@ function buildSchedulePayload(data, scheduleType) {
 }
 
 export default function App() {
-  const [isAuthed, setIsAuthed] = useState(Boolean(getToken()));
+  const [isAuthed, setIsAuthed] = useState(false);
+  const [checkingStoredToken, setCheckingStoredToken] = useState(Boolean(getToken()));
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState("");
   const [activeTab, setActiveTab] = useState("dashboard");
   const [profile, setProfile] = useState(null);
   const [goals, setGoals] = useState([]);
@@ -123,6 +126,7 @@ export default function App() {
     setIsAuthed(false);
     setProfile(null);
     setActiveTab("dashboard");
+    setAuthError("");
     setError("");
   }, []);
 
@@ -139,7 +143,7 @@ export default function App() {
     return tasks.map((task) => mapTask(task, goals, taskSchedules));
   }, [goals, taskSchedules, tasks]);
 
-  const loadProtectedData = useCallback(async () => {
+  const loadProtectedData = useCallback(async ({ requireSuccess = false } = {}) => {
     setLoading(true);
     setError("");
     try {
@@ -181,19 +185,57 @@ export default function App() {
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         handleUnauthorized();
+        if (requireSuccess) {
+          throw err;
+        }
         return;
       }
       setError(err.message);
+      if (requireSuccess) {
+        throw err;
+      }
     } finally {
       setLoading(false);
     }
   }, [handleUnauthorized]);
 
   useEffect(() => {
-    if (isAuthed) {
+    let cancelled = false;
+
+    const verifyStoredToken = async () => {
+      if (!getToken()) {
+        setCheckingStoredToken(false);
+        return;
+      }
+
+      try {
+        await loadProtectedData({ requireSuccess: true });
+        if (!cancelled) {
+          setIsAuthed(true);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          handleUnauthorized();
+        }
+      } finally {
+        if (!cancelled) {
+          setCheckingStoredToken(false);
+        }
+      }
+    };
+
+    verifyStoredToken();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [handleUnauthorized, loadProtectedData]);
+
+  useEffect(() => {
+    if (isAuthed && !profile) {
       loadProtectedData();
     }
-  }, [isAuthed, loadProtectedData]);
+  }, [isAuthed, loadProtectedData, profile]);
 
   useEffect(() => {
     window.addEventListener(UNAUTHORIZED_EVENT, handleUnauthorized);
@@ -201,12 +243,23 @@ export default function App() {
   }, [handleUnauthorized]);
 
   const handleAuth = async ({ mode, email, password }) => {
-    if (mode === "signup") {
-      await signupRequest({ email, password });
+    setAuthLoading(true);
+    setAuthError("");
+    try {
+      if (mode === "signup") {
+        await signupRequest({ email, password });
+      }
+      const token = await loginRequest({ email, password });
+      setToken(token.access_token);
+      await loadProtectedData({ requireSuccess: true });
+      setIsAuthed(true);
+    } catch (err) {
+      clearToken();
+      setIsAuthed(false);
+      setAuthError(err.message);
+    } finally {
+      setAuthLoading(false);
     }
-    const token = await loginRequest({ email, password });
-    setToken(token.access_token);
-    setIsAuthed(true);
   };
 
   const refreshPoints = async () => {
@@ -316,6 +369,7 @@ export default function App() {
     clearToken();
     setIsAuthed(false);
     setProfile(null);
+    setAuthError("");
     setActiveTab("dashboard");
   };
 
@@ -354,8 +408,12 @@ export default function App() {
     )
   }[activeTab];
 
+  if (checkingStoredToken || authLoading) {
+    return <p className="empty-text">Loading...</p>;
+  }
+
   if (!isAuthed) {
-    return <AuthPage onSubmit={handleAuth} />;
+    return <AuthPage externalError={authError} onSubmit={handleAuth} />;
   }
 
   return (

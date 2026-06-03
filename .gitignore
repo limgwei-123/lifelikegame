@@ -9,3 +9,4 @@ node_modules
 .pytest_cache
 pgdata
 .npm-cache
+lifelikegame_key.pem
