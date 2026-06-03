@@ -106,7 +106,6 @@ function buildSchedulePayload(data, scheduleType) {
 export default function App() {
   const [isAuthed, setIsAuthed] = useState(false);
   const [checkingStoredToken, setCheckingStoredToken] = useState(Boolean(getToken()));
-  const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState("");
   const [activeTab, setActiveTab] = useState("dashboard");
   const [profile, setProfile] = useState(null);
@@ -243,7 +242,6 @@ export default function App() {
   }, [handleUnauthorized]);
 
   const handleAuth = async ({ mode, email, password }) => {
-    setAuthLoading(true);
     setAuthError("");
     try {
       if (mode === "signup") {
@@ -257,8 +255,6 @@ export default function App() {
       clearToken();
       setIsAuthed(false);
       setAuthError(err.message);
-    } finally {
-      setAuthLoading(false);
     }
   };
 
@@ -408,7 +404,7 @@ export default function App() {
     )
   }[activeTab];
 
-  if (checkingStoredToken || authLoading) {
+  if (checkingStoredToken) {
     return <p className="empty-text">Loading...</p>;
   }
 
