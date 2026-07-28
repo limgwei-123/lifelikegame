@@ -58,7 +58,7 @@ class RedemptionWorkflowService:
       reward_id=reward.id,
       reward_title=reward.title,
       cost_points=reward.cost_points,
-      remaining_points=user.current_value,
+      remaining_points=updated_user.current_value,
       redeemed_at=redemption.created_at
     )
 
