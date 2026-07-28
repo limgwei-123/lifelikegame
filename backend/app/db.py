@@ -23,10 +23,9 @@ SessionLocal = sessionmaker(autocommit=False, autoflush= False, bind= engine)
 
 Base = declarative_base()
 
-def db_ping() -> str:
+def db_ping() -> None:
   with engine.connect() as conn:
-    version = conn.execute(text("SELECT version();")).scalar()
-  return version
+    conn.execute(text("SELECT 1"))
 
 def get_db():
   db = SessionLocal()

@@ -50,5 +50,5 @@ def health():
 
 @app.get("/db-health")
 def db_health():
-  version = db_ping()
-  return {"db":"ok", "version": version}
+  db_ping()
+  return {"db": "ok"}
