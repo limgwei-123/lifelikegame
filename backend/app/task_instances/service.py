@@ -100,6 +100,13 @@ class TaskInstanceService:
       task_instance=task_instance
     )
 
+    if delta == 0:
+      user = self.user_service.get_user_by_id(user_id=user_id)
+      return CompleteTaskInstanceResponse(
+        task_instance=updated_instance,
+        user=user,
+        point_ledger=None
+      )
 
     point_ledger_request = CreatePointLedgerRequest(
       delta=delta,
