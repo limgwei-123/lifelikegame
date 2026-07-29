@@ -1,13 +1,16 @@
-from datetime import date, datetime
+from datetime import datetime
 from zoneinfo import ZoneInfo
-import os
 
+from app.core.config import get_settings
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from app.db import SessionLocal
 from app.task_instances.interfaces import TaskInstanceServiceInterface
 from app.task_instances.dependencies import build_task_instance_service
 
-TIMEZONE = os.getenv("TIMEZONE","Asia/Kuala_Lumpur")
+settings = get_settings()
+
+TIMEZONE = settings.timezone
+SCHEDULER_ENABLED = settings.scheduler_enabled
 
 scheduler = AsyncIOScheduler(timezone=ZoneInfo(TIMEZONE))
 
@@ -23,6 +26,9 @@ def run_generate_task_instances_for_today():
 
 
 def start_scheduler():
+
+  if not SCHEDULER_ENABLED:
+    return
 
   if not scheduler.running:
     scheduler.add_job(

@@ -1,21 +1,22 @@
+import sys
+from pathlib import Path
+
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
+from alembic import context
 from sqlalchemy import create_engine
 from sqlalchemy.pool import NullPool
 
-import os
-import sys
-from pathlib import Path
-sys.path.append(str(Path(__file__).resolve().parents[1]))  # backend -> sys.path
+sys.path.append(
+    str(Path(__file__).resolve().parents[1])
+)
 
-from dotenv import load_dotenv
-ROOT_DIR = Path(__file__).resolve().parents[2]  # lifelikegame
-load_dotenv(ROOT_DIR / ".env")
+from app.core.config import get_settings
+from app.db import Base
+import app.models
 
-
-from alembic import context
+settings = get_settings()
+database_url = settings.database_url
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -30,9 +31,6 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-
-from app.db import Base
-import app.models
 
 target_metadata = Base.metadata
 
@@ -54,7 +52,7 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = os.environ.get("DATABASE_URL") or config.get_main_option("sqlalchemy.url")
+    url = database_url
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -73,9 +71,7 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    db_url = os.environ.get("DATABASE_URL")
-    if not db_url:
-        raise RuntimeError("DATABASE_URL not found. Check your root .env and load_dotenv path.")
+    db_url = database_url
     connectable = create_engine(db_url, poolclass=NullPool)
     # connectable = engine_from_config(
     #     config.get_section(config.config_ini_section, {}),

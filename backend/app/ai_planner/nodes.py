@@ -1,20 +1,29 @@
-import os
 from typing import Any
 
 from google import genai
 from google.genai import types
 
+from app.core.config import get_settings
 from app.ai_planner.extract_json import extract_json
 from app.ai_planner.prompts import build_generate_plan_prompt
 from app.ai_planner.schemas import AiPlannerResponse, ConversationMessage
 from app.ai_planner.state import AiPlannerGraphState
 
+settings = get_settings()
 
-api_key = os.getenv("AI_API_KEY")
-model = os.getenv("AI_MODEL")
-
+api_key = (
+    settings.ai_api_key.get_secret_value()
+    if settings.ai_api_key is not None
+    else None
+)
+model = settings.ai_model
 
 def call_ai(prompt: str) -> str:
+    if not api_key or not model:
+        raise RuntimeError(
+            "AI_API_KEY and AI_MODEL must be set "
+            "to use AI Planner"
+        )
     client = genai.Client(api_key=api_key)
 
     config = types.GenerateContentConfig(

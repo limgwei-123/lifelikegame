@@ -1,19 +1,19 @@
-import os
 import hashlib
 
 from datetime import datetime, timedelta, timezone
 from typing import Optional
-
 from jose import jwt, JWTError
 from passlib.context import CryptContext
 
+from app.core.config import get_settings
+
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-JWT_SECRET = os.getenv("JWT_SECRET")
-if not JWT_SECRET:
-  raise RuntimeError("JWT_SECRET is not set")
-JWT_ALG = os.getenv("JWT_ALG", "HS256")
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
+settings = get_settings()
+
+JWT_SECRET = settings.jwt_secret.get_secret_value()
+JWT_ALG = settings.jwt_alg
+ACCESS_TOKEN_EXPIRE_MINUTES = settings.access_token_expire_minutes
 
 def _sha256(password: str) -> str:
     return hashlib.sha256(password.encode("utf-8")).hexdigest()

@@ -1,14 +1,10 @@
-import os
-from dotenv import load_dotenv
+from app.core.config import get_settings
 
 from sqlalchemy import create_engine,text
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-load_dotenv()
-
-DATABASE_URL = os.getenv("DATABASE_URL")
-if not DATABASE_URL:
-  raise RuntimeError ("DATABASE_URL is not set")
+settings = get_settings()
+DATABASE_URL = settings.database_url
 
 if DATABASE_URL.startswith("postgresql://"):
     DATABASE_URL = DATABASE_URL.replace(
