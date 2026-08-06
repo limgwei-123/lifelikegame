@@ -10,3 +10,5 @@ node_modules
 pgdata
 .npm-cache
 lifelikegame_key.pem
+
+docs*
