@@ -18,10 +18,13 @@ def _unauthorized(detail: str = "Unauthorized") -> HTTPException:
         detail=detail,
     )
 
+def build_auth_service(user_service: UserServiceInterface)-> AuthServiceInterface:
+  return AuthService(user_service)
+
 def get_auth_service(
     user_service: UserServiceInterface = Depends(get_user_service)
 )-> AuthServiceInterface:
-  return AuthService(user_service)
+  return build_auth_service(user_service)
 
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
