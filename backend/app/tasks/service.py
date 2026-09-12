@@ -41,8 +41,7 @@ class TaskService:
     return self.task_repo.list_by_user_id(user_id)
 
   def get_task_by_id(self, task_id, user_id):
-    get_owned_task_or_raise(self.task_repo,task_id, user_id)
-    return self.task_repo.get_by_id(task_id)
+    return get_owned_task_or_raise(self.task_repo,task_id, user_id)
 
   def update_task(self, task_id, user_id, data: UpdateTaskRequest):
     task = get_owned_task_or_raise(self.task_repo,task_id, user_id)

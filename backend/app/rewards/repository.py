@@ -15,6 +15,9 @@ class RewardRepository:
   def list_by_user_id(self, user_id):
     return self.db.query(Reward).filter(Reward.user_id == user_id).all()
 
+  def get_by_id(self, reward_id):
+    return self.db.query(Reward).filter(Reward.id == reward_id).first()
+
   def get_by_id_and_user_id(self, reward_id, user_id):
     return self.db.query(Reward).filter(Reward.id == reward_id, Reward.user_id == user_id).first()
 

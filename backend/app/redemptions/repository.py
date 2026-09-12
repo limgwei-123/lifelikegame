@@ -14,5 +14,8 @@ class RedemptionRepository:
   def list_by_user_id(self, user_id):
     return self.db.query(Redemption).filter(Redemption.user_id == user_id).all()
 
+  def get_by_id(self, redemption_id):
+    return self.db.query(Redemption).filter(Redemption.id == redemption_id).first()
+
   def get_by_id_and_user_id(self, redemption_id, user_id):
     return self.db.query(Redemption).filter(Redemption.id == redemption_id, Redemption.user_id == user_id).first()

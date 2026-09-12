@@ -42,8 +42,7 @@ class TaskScheduleService:
     return self.task_schedule_repo.list_by_user_id(user_id)
 
   def get_task_schedule_by_id(self, task_schedule_id, user_id):
-    get_owned_task_schedule_or_raise(self.task_schedule_repo,task_schedule_id, user_id)
-    return self.task_schedule_repo.get_by_id(task_schedule_id)
+    return get_owned_task_schedule_or_raise(self.task_schedule_repo,task_schedule_id, user_id)
 
   def update_task_schedule(self, task_schedule_id, user_id, data: UpdateTaskScheduleRequest):
     task_schedule = get_owned_task_schedule_or_raise(self.task_schedule_repo,task_schedule_id, user_id)

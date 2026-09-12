@@ -16,6 +16,9 @@ class PointLedgerRepository:
   def list_by_user_id(self, user_id):
     return self.db.query(PointLedger).filter(PointLedger.user_id == user_id).all()
 
+  def get_by_id(self, point_ledger_id):
+    return self.db.query(PointLedger).filter(PointLedger.id == point_ledger_id).first()
+
   def get_by_id_and_user_id(self, point_ledger_id, user_id):
     return self.db.query(PointLedger).filter(PointLedger.id == point_ledger_id, PointLedger.user_id == user_id).first()
 
