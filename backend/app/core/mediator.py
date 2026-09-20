@@ -1,5 +1,7 @@
+from collections.abc import Callable, Iterable
 from typing import Any, cast
 
+from app.core.behaviors import Behavior
 from app.core.cqrs import Command, Handler, Query, RequestT_contra, ResultT_co
 
 
@@ -41,9 +43,25 @@ class HandlerRegistry:
 
 
 class Mediator:
-  def __init__(self, registry: HandlerRegistry):
+  def __init__(
+      self,
+      registry: HandlerRegistry,
+      behaviors: Iterable[Behavior[Any, Any]] = (),
+  ):
     self._registry = registry
+    self._behaviors = tuple(behaviors)
 
   def send(self, request: RequestT_contra) -> Any:
     handler = self._registry.resolve(type(request))
-    return handler.handle(request)
+    next_handler: Callable[[], Any] = lambda: handler.handle(request)
+
+    def wrap(
+        behavior: Behavior[Any, Any],
+        next_step: Callable[[], Any],
+    ) -> Callable[[], Any]:
+      return lambda: behavior.handle(request, next_step)
+
+    for behavior in reversed(self._behaviors):
+      next_handler = wrap(behavior, next_handler)
+
+    return next_handler()
