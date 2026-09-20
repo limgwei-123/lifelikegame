@@ -1,23 +1,23 @@
 from app.tasks.repository import TaskRepository
-from app.goals.repository import GoalRepository
+from app.goals.interfaces import GoalServiceInterface
 from app.scoring_schemes.interfaces import ScoringSchemeServiceInterface
 
 from app.tasks.dtos import CreateTaskDTO, UpdateTaskDTO
 
-from app.shared.ownership import get_owned_goal_or_raise, get_owned_task_or_raise
+from app.shared.ownership import get_owned_task_or_raise
 from app.tasks.models import Task
 from app.shared.function import get_scoring_scheme_workflow
 
 
 class TaskService:
-  def __init__(self, task_repo: TaskRepository, goal_repo: GoalRepository, scoring_scheme_service: ScoringSchemeServiceInterface):
+  def __init__(self, task_repo: TaskRepository, goal_service: GoalServiceInterface, scoring_scheme_service: ScoringSchemeServiceInterface):
     self.task_repo = task_repo
-    self.goal_repo = goal_repo
+    self.goal_service = goal_service
     self.scoring_scheme_service = scoring_scheme_service
 
 
   def create_task(self, goal_id, user_id, payload: CreateTaskDTO):
-    goal = get_owned_goal_or_raise(self.goal_repo,goal_id, user_id)
+    goal = self.goal_service.get_goal_by_id(goal_id=goal_id, user_id=user_id)
 
     scoring_scheme = get_scoring_scheme_workflow(scoring_scheme_id=payload.scoring_scheme_id,scoring_scheme_service=self.scoring_scheme_service)
 
@@ -34,7 +34,7 @@ class TaskService:
     return self.task_repo.create(task)
 
   def list_tasks_by_goal_id(self, goal_id, user_id):
-    goal = get_owned_goal_or_raise(self.goal_repo,goal_id = goal_id, user_id = user_id)
+    goal = self.goal_service.get_goal_by_id(goal_id=goal_id, user_id=user_id)
     return self.task_repo.list_by_goal_id(goal.id)
 
   def list_tasks_by_user_id(self, user_id):
