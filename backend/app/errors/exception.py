@@ -32,3 +32,12 @@ class ConflictError(AppError):
     code = "CONFLICT"
     default_message = "Conflict"
     status_code = 409
+
+
+class RequestValidationError(AppError):
+    code = "VALIDATION_ERROR"
+    default_message = "Request validation failed"
+    status_code = 422
+
+    def __init__(self, issues: list[dict[str, str]]):
+        super().__init__(details={"issues": issues})

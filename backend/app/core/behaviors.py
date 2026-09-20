@@ -1,4 +1,4 @@
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from contextvars import ContextVar, Token
 from dataclasses import dataclass
 import logging
@@ -8,9 +8,15 @@ from uuid import uuid4
 
 from app.core.cqrs import Command, Handler, Query, TransactionalCommand
 from app.core.unit_of_work import UnitOfWork
+from app.errors.exception import RequestValidationError
 
 
 BehaviorResultT = TypeVar("BehaviorResultT")
+ValidationRequestT_contra = TypeVar(
+  "ValidationRequestT_contra",
+  bound=Command | Query,
+  contravariant=True,
+)
 _request_id: ContextVar[str | None] = ContextVar("request_id", default=None)
 
 
@@ -39,6 +45,75 @@ class Behavior(Protocol[BehaviorResultT]):
       next_handler: Callable[[], BehaviorResultT],
   ) -> BehaviorResultT:
     ...
+
+
+@dataclass(frozen=True, slots=True)
+class ValidationIssue:
+  field: str
+  message: str
+  code: str = "invalid"
+
+  def to_dict(self) -> dict[str, str]:
+    return {
+      "field": self.field,
+      "message": self.message,
+      "code": self.code,
+    }
+
+
+class Validator(Protocol[ValidationRequestT_contra]):
+  def validate(
+      self,
+      request: ValidationRequestT_contra,
+  ) -> Iterable[ValidationIssue]:
+    ...
+
+
+class ValidatorRegistry:
+  def __init__(self) -> None:
+    self._validators: dict[
+      type[Command | Query],
+      list[Validator[Any]],
+    ] = {}
+
+  def register(
+      self,
+      request_type: type[ValidationRequestT_contra],
+      validator: Validator[ValidationRequestT_contra],
+  ) -> None:
+    self._validators.setdefault(request_type, []).append(validator)
+
+  def resolve(
+      self,
+      request_type: type[ValidationRequestT_contra],
+  ) -> tuple[Validator[ValidationRequestT_contra], ...]:
+    validators = self._validators.get(request_type, [])
+    return tuple(validators)
+
+
+class ValidationBehavior:
+  def __init__(self, registry: ValidatorRegistry):
+    self._registry = registry
+
+  def handle(
+      self,
+      context: BehaviorContext,
+      next_handler: Callable[[], BehaviorResultT],
+  ) -> BehaviorResultT:
+    validators = self._registry.resolve(type(context.request))
+    issues = [
+      issue
+      for validator in validators
+      for issue in validator.validate(context.request)
+    ]
+
+    if issues:
+      raise RequestValidationError([
+        issue.to_dict()
+        for issue in issues
+      ])
+
+    return next_handler()
 
 
 class TransactionBehavior:
