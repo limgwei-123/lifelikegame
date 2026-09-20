@@ -4,7 +4,7 @@ from app.scoring_schemes.interfaces import ScoringSchemeServiceInterface
 
 from app.tasks.dtos import CreateTaskDTO, UpdateTaskDTO
 
-from app.shared.ownership import get_owned_task_or_raise
+from app.errors.exception import NotFoundError
 from app.tasks.models import Task
 from app.shared.function import get_scoring_scheme_workflow
 
@@ -41,10 +41,13 @@ class TaskService:
     return self.task_repo.list_by_user_id(user_id)
 
   def get_task_by_id(self, task_id, user_id):
-    return get_owned_task_or_raise(self.task_repo,task_id, user_id)
+    task = self.task_repo.get_by_id_and_user_id(task_id, user_id)
+    if not task:
+      raise NotFoundError("Task not found")
+    return task
 
   def update_task(self, task_id, user_id, data: UpdateTaskDTO):
-    task = get_owned_task_or_raise(self.task_repo,task_id, user_id)
+    task = self.get_task_by_id(task_id=task_id, user_id=user_id)
 
     for field, value in data.changes.items():
         setattr(task, field, value)
@@ -54,6 +57,6 @@ class TaskService:
     )
 
   def delete_task(self, task_id, user_id):
-    task = get_owned_task_or_raise(self.task_repo,task_id, user_id)
+    task = self.get_task_by_id(task_id=task_id, user_id=user_id)
 
     self.task_repo.delete(task)

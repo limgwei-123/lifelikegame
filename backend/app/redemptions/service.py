@@ -1,18 +1,18 @@
 from app.redemptions.repository import RedemptionRepository
 from app.redemptions.schemas import CreateRedemptionRequest
-from app.shared.ownership import get_owned_redemption_or_raise, get_owned_reward_or_raise
+from app.errors.exception import NotFoundError
 
-from app.rewards.repository import RewardRepository
+from app.rewards.interfaces import RewardServiceInterface
 from app.redemptions.models import Redemption
 
 class RedemptionService:
-  def __init__(self, redemption_repo: RedemptionRepository, reward_repo: RewardRepository):
+  def __init__(self, redemption_repo: RedemptionRepository, reward_service: RewardServiceInterface):
     self.redemption_repo = redemption_repo
-    self.reward_repo = reward_repo
+    self.reward_service = reward_service
 
   def create_redemption(self, user_id, payload: CreateRedemptionRequest):
 
-    reward = get_owned_reward_or_raise(reward_repo= self.reward_repo, reward_id=payload.reward_id , user_id=user_id)
+    reward = self.reward_service.get_reward_by_id(reward_id=payload.reward_id, user_id=user_id)
 
     reward_snapshot_json = {
     "id": reward.id,
@@ -33,4 +33,7 @@ class RedemptionService:
     return self.redemption_repo.list_by_user_id(user_id=user_id)
 
   def get_redemption_by_id(self, redemption_id, user_id):
-    return get_owned_redemption_or_raise(redemption_repo=self.redemption_repo, redemption_id=redemption_id, user_id=user_id)
+    redemption = self.redemption_repo.get_by_id_and_user_id(redemption_id=redemption_id, user_id=user_id)
+    if not redemption:
+      raise NotFoundError("Redemption not found")
+    return redemption

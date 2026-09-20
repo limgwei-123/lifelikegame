@@ -6,12 +6,12 @@ from app.redemptions.interfaces import RedemptionServiceInterface
 from app.redemptions.repository import RedemptionRepository
 from app.redemptions.service import RedemptionService
 
-from app.rewards.repository import RewardRepository
+from app.rewards.dependencies import build_reward_service
 
 def build_redemption_service(db:Session)->RedemptionServiceInterface:
   return RedemptionService(
     redemption_repo=RedemptionRepository(db),
-    reward_repo=RewardRepository(db)
+    reward_service=build_reward_service(db)
   )
 
 def get_redemption_service(db: Session = Depends(get_db))->RedemptionServiceInterface:

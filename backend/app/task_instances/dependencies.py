@@ -4,8 +4,8 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.task_instances.interfaces import TaskInstanceServiceInterface
 from app.task_instances.repository import TaskInstanceRepository
-from app.tasks.repository import TaskRepository
-from app.task_schedules.repository import TaskScheduleRepository
+from app.tasks.dependencies import build_task_service
+from app.task_schedules.dependencies import build_task_schedule_service
 
 from app.task_instances.service import TaskInstanceService
 
@@ -16,8 +16,8 @@ from app.users.dependencies import build_user_service
 def build_task_instance_service(db: Session) -> TaskInstanceServiceInterface:
 
     return TaskInstanceService(
-        task_repo=TaskRepository(db),
-        task_schedule_repo=TaskScheduleRepository(db),
+        task_service=build_task_service(db),
+        task_schedule_service=build_task_schedule_service(db),
         task_instance_repo=TaskInstanceRepository(db),
         point_ledger_service=build_point_ledger_service(db),
         user_service=build_user_service(db)

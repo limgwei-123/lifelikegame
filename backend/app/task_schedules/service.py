@@ -1,19 +1,19 @@
-from app.tasks.repository import TaskRepository
+from app.tasks.interfaces import TaskServiceInterface
 from app.task_schedules.repository import TaskScheduleRepository
 from app.task_schedules.schemas import CreateTaskScheduleRequest, UpdateTaskScheduleRequest
 from app.task_schedules.schemas import WeeklyValue, MonthlyValue
 from app.task_schedules.models import ScheduleType
 
-from app.shared.ownership import get_owned_task_or_raise, get_owned_task_schedule_or_raise
+from app.errors.exception import NotFoundError
 from app.task_schedules.models import TaskSchedule
 class TaskScheduleService:
-  def __init__(self, task_schedule_repo: TaskScheduleRepository, task_repo: TaskRepository):
+  def __init__(self, task_schedule_repo: TaskScheduleRepository, task_service: TaskServiceInterface):
     self.task_schedule_repo = task_schedule_repo
-    self.task_repo = task_repo
+    self.task_service = task_service
 
 
   def create_task_schedule(self, task_id, user_id, payload: CreateTaskScheduleRequest):
-    task = get_owned_task_or_raise(self.task_repo, task_id, user_id)
+    task = self.task_service.get_task_by_id(task_id=task_id, user_id=user_id)
 
     self._validate_schedule_value(
     schedule_type=payload.schedule_type,
@@ -35,17 +35,20 @@ class TaskScheduleService:
     return self.task_schedule_repo.list_all()
 
   def list_task_schedules_by_task_id(self, task_id, user_id):
-    task = get_owned_task_or_raise(self.task_repo,task_id = task_id, user_id = user_id)
+    task = self.task_service.get_task_by_id(task_id=task_id, user_id=user_id)
     return self.task_schedule_repo.list_by_task_id(task.id)
 
   def list_task_schedules_by_user_id(self, user_id):
     return self.task_schedule_repo.list_by_user_id(user_id)
 
   def get_task_schedule_by_id(self, task_schedule_id, user_id):
-    return get_owned_task_schedule_or_raise(self.task_schedule_repo,task_schedule_id, user_id)
+    task_schedule = self.task_schedule_repo.get_by_id_and_user_id(task_schedule_id, user_id)
+    if not task_schedule:
+      raise NotFoundError("Task Schedule not found")
+    return task_schedule
 
   def update_task_schedule(self, task_schedule_id, user_id, data: UpdateTaskScheduleRequest):
-    task_schedule = get_owned_task_schedule_or_raise(self.task_schedule_repo,task_schedule_id, user_id)
+    task_schedule = self.get_task_schedule_by_id(task_schedule_id=task_schedule_id, user_id=user_id)
 
     self._validate_schedule_value(
     schedule_type=data.schedule_type,
@@ -62,7 +65,7 @@ class TaskScheduleService:
     )
 
   def delete_task_schedule(self, task_schedule_id, user_id):
-    task_schedule = get_owned_task_schedule_or_raise(self.task_schedule_repo,task_schedule_id, user_id)
+    task_schedule = self.get_task_schedule_by_id(task_schedule_id=task_schedule_id, user_id=user_id)
 
     self.task_schedule_repo.delete(task_schedule)
 

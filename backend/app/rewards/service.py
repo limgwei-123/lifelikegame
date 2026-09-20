@@ -1,6 +1,6 @@
 from app.rewards.repository import RewardRepository
 from app.rewards.schemas import CreateRewardRequest, UpdateRewardRequest
-from app.shared.ownership import get_owned_reward_or_raise
+from app.errors.exception import NotFoundError
 
 from app.rewards.models import Reward
 
@@ -22,13 +22,16 @@ class RewardService:
     return self.reward_repo.list_by_user_id(user_id=user_id)
 
   def get_reward_by_id(self, reward_id, user_id):
-    return get_owned_reward_or_raise(reward_repo=self.reward_repo, reward_id=reward_id, user_id=user_id)
+    reward = self.reward_repo.get_by_id_and_user_id(reward_id=reward_id, user_id=user_id)
+    if not reward:
+      raise NotFoundError("Reward not found")
+    return reward
 
   def get_available_reward(self, reward_id, user_id):
     return self.reward_repo.get_available_reward_by_id_and_user_id(reward_id=reward_id, user_id=user_id)
 
   def update_reward(self, reward_id, user_id, data: UpdateRewardRequest):
-    reward = get_owned_reward_or_raise(reward_repo=self.reward_repo, reward_id=reward_id, user_id=user_id)
+    reward = self.get_reward_by_id(reward_id=reward_id, user_id=user_id)
 
     update_reward = data.model_dump(exclude_unset=True)
 
@@ -41,6 +44,6 @@ class RewardService:
     )
 
   def delete_reward(self, reward_id, user_id):
-    reward = get_owned_reward_or_raise(reward_repo=self.reward_repo, reward_id=reward_id, user_id=user_id)
+    reward = self.get_reward_by_id(reward_id=reward_id, user_id=user_id)
 
     self.reward_repo.delete(reward=reward)

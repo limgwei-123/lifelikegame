@@ -5,6 +5,9 @@ from app.task_instances.models import TaskInstance
 from app.task_instances.schemas import CompleteTaskInstanceResponse
 
 class TaskInstanceServiceInterface(Protocol):
+  def get_task_instance_by_id(self, task_instance_id: int, user_id: uuid.UUID) -> TaskInstance:
+    ...
+
   def create_task_instance_for_date(
       self,
       task_id: int,

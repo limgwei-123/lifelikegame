@@ -1,31 +1,31 @@
-from app.tasks.repository import TaskRepository
 from app.task_instances.repository import TaskInstanceRepository
-from app.task_schedules.repository import TaskScheduleRepository
 from app.task_instances.models import TaskInstance, TaskInstanceStatus
 from datetime import date
 
+from app.tasks.interfaces import TaskServiceInterface
+from app.task_schedules.interfaces import TaskScheduleServiceInterface
 from app.point_ledgers.interfaces import PointLedgerServiceInterface
 from app.users.interfaces import UserServiceInterface
 
 from app.task_schedules.models import ScheduleType
 
-from app.shared.ownership import get_owned_task_or_raise, get_owned_task_schedule_or_raise, get_owned_task_instance_or_raise
+from app.errors.exception import NotFoundError
 from app.shared.enums import EntryType
 from app.point_ledgers.schemas import CreatePointLedgerRequest
 from app.task_instances.schemas import CompleteTaskInstanceResponse,TaskInstanceResponse
 
 class TaskInstanceService:
-  def __init__(self, task_instance_repo: TaskInstanceRepository, task_repo: TaskRepository,
-               task_schedule_repo: TaskScheduleRepository, point_ledger_service: PointLedgerServiceInterface, user_service: UserServiceInterface):
+  def __init__(self, task_instance_repo: TaskInstanceRepository, task_service: TaskServiceInterface,
+               task_schedule_service: TaskScheduleServiceInterface, point_ledger_service: PointLedgerServiceInterface, user_service: UserServiceInterface):
     self.task_instance_repo = task_instance_repo
-    self.task_repo = task_repo
-    self.task_schedule_repo = task_schedule_repo
+    self.task_service = task_service
+    self.task_schedule_service = task_schedule_service
     self.point_ledger_service = point_ledger_service
     self.user_service = user_service
 
   def create_task_instance_for_date(self, task_id, task_schedule_id, user_id, date_instance):
-    task = get_owned_task_or_raise(self.task_repo, task_id=task_id, user_id=user_id)
-    task_schedule = get_owned_task_schedule_or_raise(self.task_schedule_repo, task_schedule_id=task_schedule_id, user_id=user_id)
+    task = self.task_service.get_task_by_id(task_id=task_id, user_id=user_id)
+    task_schedule = self.task_schedule_service.get_task_schedule_by_id(task_schedule_id=task_schedule_id, user_id=user_id)
 
     return self._create_task_instance(
       task=task,
@@ -36,15 +36,16 @@ class TaskInstanceService:
 
   #use for cron
   def generate_task_instances_for_date(self, target_date):
-    task_schedules = self.task_schedule_repo.list_all()
+    task_schedules = self.task_schedule_service.list_all_task_schedules()
     created_task_instance = []
 
     for task_schedule in task_schedules:
       if not self._should_generate_for_date(task_schedule, target_date):
         continue
 
-      task = self.task_repo.get_by_id_and_user_id(task_id=task_schedule.task_id,user_id=task_schedule.user_id)
-      if not task:
+      try:
+        task = self.task_service.get_task_by_id(task_id=task_schedule.task_id, user_id=task_schedule.user_id)
+      except NotFoundError:
         continue
 
       task_instance = self._create_task_instance(
@@ -72,13 +73,19 @@ class TaskInstanceService:
 
     return self.task_instance_repo.list_by_user_id_between_date(user_id=user_id, start_date=start_date, end_date=end_date)
 
+  def get_task_instance_by_id(self, task_instance_id, user_id):
+    task_instance = self.task_instance_repo.get_by_id_and_user_id(task_instance_id, user_id)
+    if not task_instance:
+      raise NotFoundError("Task Instance not found")
+    return task_instance
+
   def complete_task_instance(
       self,
       task_instance_id:int,
       user_id,
       completion_level: str
   ):
-    task_instance = get_owned_task_instance_or_raise(self.task_instance_repo, task_instance_id=task_instance_id, user_id=user_id)
+    task_instance = self.get_task_instance_by_id(task_instance_id=task_instance_id, user_id=user_id)
 
     scoring_snapshot = task_instance.scoring_snapshot_json or {}
     if completion_level not in scoring_snapshot:
