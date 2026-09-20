@@ -3,6 +3,7 @@ from app.task_schedules.interfaces import TaskScheduleServiceInterface
 from app.goals.interfaces import GoalServiceInterface
 from app.task_instances.interfaces import TaskInstanceServiceInterface
 from app.scoring_schemes.interfaces import ScoringSchemeServiceInterface
+from app.tasks.dtos import CreateTaskDTO
 
 from app.workflows.task_workflow.schemas import CreateTaskWithScheduleRequest, TaskWithScheduleResponse,ConfirmAiPlanRequest,GoalTaskSchduleResponse
 
@@ -35,7 +36,7 @@ class TaskWorkflowService:
     task = self.task_service.create_task(
       goal_id=goal_id,
       user_id=user_id,
-      payload=payload.task,
+      payload=CreateTaskDTO(**payload.task.model_dump()),
       )
 
     schedule = None

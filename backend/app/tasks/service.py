@@ -2,7 +2,7 @@ from app.tasks.repository import TaskRepository
 from app.goals.repository import GoalRepository
 from app.scoring_schemes.interfaces import ScoringSchemeServiceInterface
 
-from app.tasks.schemas import CreateTaskRequest, UpdateTaskRequest
+from app.tasks.dtos import CreateTaskDTO, UpdateTaskDTO
 
 from app.shared.ownership import get_owned_goal_or_raise, get_owned_task_or_raise
 from app.tasks.models import Task
@@ -16,7 +16,7 @@ class TaskService:
     self.scoring_scheme_service = scoring_scheme_service
 
 
-  def create_task(self, goal_id, user_id, payload: CreateTaskRequest):
+  def create_task(self, goal_id, user_id, payload: CreateTaskDTO):
     goal = get_owned_goal_or_raise(self.goal_repo,goal_id, user_id)
 
     scoring_scheme = get_scoring_scheme_workflow(scoring_scheme_id=payload.scoring_scheme_id,scoring_scheme_service=self.scoring_scheme_service)
@@ -43,12 +43,10 @@ class TaskService:
   def get_task_by_id(self, task_id, user_id):
     return get_owned_task_or_raise(self.task_repo,task_id, user_id)
 
-  def update_task(self, task_id, user_id, data: UpdateTaskRequest):
+  def update_task(self, task_id, user_id, data: UpdateTaskDTO):
     task = get_owned_task_or_raise(self.task_repo,task_id, user_id)
 
-    update_task = data.model_dump(exclude_unset=True)
-
-    for field, value in update_task.items():
+    for field, value in data.changes.items():
         setattr(task, field, value)
 
     return self.task_repo.update(

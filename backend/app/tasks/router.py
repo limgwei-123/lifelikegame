@@ -9,6 +9,7 @@ from app.tasks.schemas import (
 
 from app.tasks.interfaces import TaskServiceInterface
 from app.tasks.dependencies import get_task_service
+from app.tasks.dtos import CreateTaskDTO, UpdateTaskDTO
 
 router = APIRouter(tags=["tasks"])
 
@@ -20,7 +21,7 @@ def create_task(goal_id,
   return task_service.create_task(
     goal_id = goal_id,
     user_id = current_user.id,
-    payload = payload
+    payload = CreateTaskDTO(**payload.model_dump())
   )
 
 @router.get('/goals/{goal_id}/tasks', response_model=list[TaskResponse], status_code = status.HTTP_200_OK)
@@ -45,7 +46,7 @@ def update_task(task_id,
   return task_service.update_task(
     task_id= task_id,
     user_id= current_user.id,
-    data= payload
+    data=UpdateTaskDTO(changes=payload.model_dump(exclude_unset=True))
   )
 
 @router.post("/tasks/{task_id}/delete", status_code = status.HTTP_204_NO_CONTENT)
