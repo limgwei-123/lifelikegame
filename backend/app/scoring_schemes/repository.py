@@ -8,7 +8,7 @@ class ScoringSchemeRepository:
 
   def create(self, scoring_scheme: ScoringScheme):
     self.db.add(scoring_scheme)
-    self.db.commit()
+    self.db.flush()
     self.db.refresh(scoring_scheme)
     return scoring_scheme
 
@@ -26,10 +26,10 @@ class ScoringSchemeRepository:
     ).first()
 
   def update(self, scoring_scheme: ScoringScheme):
-    self.db.commit()
+    self.db.flush()
     self.db.refresh(scoring_scheme)
     return scoring_scheme
 
   def delete(self, scoring_scheme: ScoringScheme):
     self.db.delete(scoring_scheme)
-    self.db.commit()
+    self.db.flush()

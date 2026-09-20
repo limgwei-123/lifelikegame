@@ -11,6 +11,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from app.main import app
 from app.db import Base, get_db
+from app.core.unit_of_work import build_unit_of_work
 
 
 TEST_DATABASE_URL = os.getenv(
@@ -41,7 +42,8 @@ def db():
 @pytest.fixture
 def client(db):
     def override_get_db():
-        yield db
+        with build_unit_of_work(db).begin():
+            yield db
 
     app.dependency_overrides[get_db] = override_get_db
 

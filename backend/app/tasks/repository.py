@@ -8,7 +8,7 @@ class TaskRepository:
 
   def create(self, task: Task):
     self.db.add(task)
-    self.db.commit()
+    self.db.flush()
     self.db.refresh(task)
     return task
 
@@ -25,11 +25,11 @@ class TaskRepository:
     return self.db.query(Task).filter(Task.id == task_id, Task.user_id == user_id).first()
 
   def update(self, task: Task) -> Task:
-    self.db.commit()
+    self.db.flush()
     self.db.refresh(task)
     return task
 
   def delete(self, task: Task):
     self.db.delete(task)
-    self.db.commit()
+    self.db.flush()
 

@@ -1,4 +1,5 @@
 from app.core.config import get_settings
+from app.core.unit_of_work import build_unit_of_work
 
 from sqlalchemy import create_engine,text
 from sqlalchemy.orm import sessionmaker, declarative_base
@@ -26,6 +27,7 @@ def db_ping() -> None:
 def get_db():
   db = SessionLocal()
   try:
-    yield db
+    with build_unit_of_work(db).begin():
+      yield db
   finally:
     db.close()

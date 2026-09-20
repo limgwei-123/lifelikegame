@@ -8,7 +8,7 @@ class RewardRepository:
 
   def create(self, reward: Reward):
     self.db.add(reward)
-    self.db.commit()
+    self.db.flush()
     self.db.refresh(reward)
     return reward
 
@@ -26,10 +26,10 @@ class RewardRepository:
 
   def update(self, reward: Reward):
 
-    self.db.commit()
+    self.db.flush()
     self.db.refresh(reward)
     return reward
 
   def delete(self, reward: Reward):
     self.db.delete(reward)
-    self.db.commit()
+    self.db.flush()

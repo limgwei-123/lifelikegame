@@ -7,7 +7,7 @@ class GoalRepository:
 
   def create(self, goal: Goal):
     self.db.add(goal)
-    self.db.commit()
+    self.db.flush()
     self.db.refresh(goal)
     return goal
 
@@ -21,10 +21,10 @@ class GoalRepository:
     return self.db.query(Goal).filter(Goal.id == goal_id, Goal.user_id == user_id).first()
 
   def update(self, goal: Goal) -> Goal:
-    self.db.commit()
+    self.db.flush()
     self.db.refresh(goal)
     return goal
 
   def delete(self, goal: Goal):
     self.db.delete(goal)
-    self.db.commit()
+    self.db.flush()

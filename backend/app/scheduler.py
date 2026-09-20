@@ -2,6 +2,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from app.core.config import get_settings
+from app.core.unit_of_work import build_unit_of_work
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from app.db import SessionLocal
 from app.task_instances.interfaces import TaskInstanceServiceInterface
@@ -18,9 +19,10 @@ def run_generate_task_instances_for_today():
   db = SessionLocal()
   print("🔥 CRON JOB TRIGGERED")
   try:
-    service:TaskInstanceServiceInterface = build_task_instance_service(db)
-    target_date = datetime.now(ZoneInfo(TIMEZONE)).date()
-    service.generate_task_instances_for_date(target_date=target_date)
+    with build_unit_of_work(db).begin():
+      service:TaskInstanceServiceInterface = build_task_instance_service(db)
+      target_date = datetime.now(ZoneInfo(TIMEZONE)).date()
+      service.generate_task_instances_for_date(target_date=target_date)
   finally:
     db.close()
 

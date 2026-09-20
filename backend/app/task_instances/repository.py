@@ -9,7 +9,7 @@ class TaskInstanceRepository:
 
   def create(self, task_instance: TaskInstance):
     self.db.add(task_instance)
-    self.db.commit()
+    self.db.flush()
     self.db.refresh(task_instance)
     return task_instance
 
@@ -40,6 +40,6 @@ class TaskInstanceRepository:
 
   def update(self, task_instance: TaskInstance) -> TaskInstance:
 
-    self.db.commit()
+    self.db.flush()
     self.db.refresh(task_instance)
     return task_instance

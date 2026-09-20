@@ -9,7 +9,7 @@ class PointLedgerRepository:
   def create(self, point_ledger: PointLedger):
 
     self.db.add(point_ledger)
-    self.db.commit()
+    self.db.flush()
     self.db.refresh(point_ledger)
     return point_ledger
 

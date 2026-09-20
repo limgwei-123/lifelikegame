@@ -7,7 +7,7 @@ class RedemptionRepository:
 
   def create(self, redemption: Redemption):
     self.db.add(redemption)
-    self.db.commit()
+    self.db.flush()
     self.db.refresh(redemption)
     return redemption
 

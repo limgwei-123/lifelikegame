@@ -8,7 +8,7 @@ class TaskScheduleRepository:
 
   def create(self, task_schedule:TaskSchedule):
     self.db.add(task_schedule)
-    self.db.commit()
+    self.db.flush()
     self.db.refresh(task_schedule)
     return task_schedule
 
@@ -28,11 +28,11 @@ class TaskScheduleRepository:
     return self.db.query(TaskSchedule).filter(TaskSchedule.id == task_schedule_id, TaskSchedule.user_id == user_id).first()
 
   def update(self, task_schedule: TaskSchedule) -> TaskSchedule:
-    self.db.commit()
+    self.db.flush()
     self.db.refresh(task_schedule)
     return task_schedule
 
   def delete(self, task_schedule: TaskSchedule):
     self.db.delete(task_schedule)
-    self.db.commit()
+    self.db.flush()
 
