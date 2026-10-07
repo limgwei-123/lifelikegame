@@ -1,6 +1,11 @@
 from app.task_instances.repository import TaskInstanceRepository
-from app.task_instances.models import TaskInstance, TaskInstanceStatus
+from app.task_instances.models import (
+  ACTIVE_TASK_INSTANCE_UNIQUE_INDEX,
+  TaskInstance,
+  TaskInstanceStatus,
+)
 from datetime import date
+from sqlalchemy.exc import IntegrityError
 
 from app.tasks.interfaces import TaskServiceInterface
 from app.task_schedules.interfaces import TaskScheduleServiceInterface
@@ -9,7 +14,7 @@ from app.users.interfaces import UserServiceInterface
 
 from app.task_schedules.models import ScheduleType
 
-from app.errors.exception import NotFoundError
+from app.errors.exception import ConflictError, NotFoundError
 from app.shared.enums import EntryType
 from app.point_ledgers.schemas import CreatePointLedgerRequest
 from app.task_instances.schemas import CompleteTaskInstanceResponse,TaskInstanceResponse
@@ -161,7 +166,19 @@ class TaskInstanceService:
         # generated_reason= "Everyday Auto"
     )
 
-    return self.task_instance_repo.create(task_instance)
+    try:
+      return self.task_instance_repo.create(task_instance)
+    except IntegrityError as error:
+      constraint_name = getattr(
+        getattr(error.orig, "diag", None),
+        "constraint_name",
+        None,
+      )
+      if constraint_name == ACTIVE_TASK_INSTANCE_UNIQUE_INDEX:
+        raise ConflictError(
+          "Task instance already exists for this task and date"
+        ) from error
+      raise
 
   def _should_generate_for_date(self, task_schedule, target_date):
 

@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime,date
 from typing import TYPE_CHECKING
-from sqlalchemy import ForeignKey, DateTime, Date, String, Integer, JSON
+from sqlalchemy import ForeignKey, DateTime, Date, String, Integer, JSON, Index, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db import Base
 from app.shared.enums import TaskInstanceStatus
@@ -9,8 +9,20 @@ from app.shared.enums import TaskInstanceStatus
 if TYPE_CHECKING:
   from app.models import *
 
+ACTIVE_TASK_INSTANCE_UNIQUE_INDEX = "uq_task_instances_active_task_date"
+
+
 class TaskInstance(Base):
   __tablename__ = "task_instances"
+  __table_args__ = (
+    Index(
+      ACTIVE_TASK_INSTANCE_UNIQUE_INDEX,
+      "task_id",
+      "date_instance",
+      unique=True,
+      postgresql_where=text("deleted_at IS NULL"),
+    ),
+  )
 
   id: Mapped[int] = mapped_column(
     primary_key=True,
