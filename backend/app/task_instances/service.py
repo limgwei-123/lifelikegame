@@ -17,7 +17,7 @@ from app.task_schedules.models import ScheduleType
 from app.errors.exception import ConflictError, NotFoundError
 from app.shared.enums import EntryType
 from app.point_ledgers.schemas import CreatePointLedgerRequest
-from app.task_instances.schemas import CompleteTaskInstanceResponse,TaskInstanceResponse
+from app.task_instances.dtos import CompleteTaskInstanceResultDTO
 
 class TaskInstanceService:
   def __init__(self, task_instance_repo: TaskInstanceRepository, task_service: TaskServiceInterface,
@@ -119,7 +119,7 @@ class TaskInstanceService:
 
     if delta == 0:
       user = self.user_service.get_user_by_id(user_id=user_id)
-      return CompleteTaskInstanceResponse(
+      return CompleteTaskInstanceResultDTO(
         task_instance=updated_instance,
         user=user,
         point_ledger=None
@@ -141,7 +141,7 @@ class TaskInstanceService:
 
     user = self.user_service.update_user_point(user_id=user_id, delta=delta)
 
-    return CompleteTaskInstanceResponse(
+    return CompleteTaskInstanceResultDTO(
       task_instance=updated_instance,
       user=user,
       point_ledger=point_ledger

@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends, status, Query
 
 from app.auth.dependencies import get_current_user
+from app.core.mediator import Mediator
+from app.task_instances.commands import CompleteTaskInstanceCommand
 from app.task_instances.schemas import TaskInstanceResponse, CompleteTaskInstanceRequest, CreateTaskInstanceRequest,CompleteTaskInstanceResponse
 
 from app.task_instances.interfaces import TaskInstanceServiceInterface
-from app.task_instances.dependencies import get_task_instance_service
+from app.task_instances.dependencies import get_complete_task_instance_mediator, get_task_instance_service
 
 from datetime import date
 
@@ -32,9 +34,21 @@ def generate_task_instances_for_date(
 
 
 @router.post("/task_instances/{task_instance_id}/complete", response_model=CompleteTaskInstanceResponse, status_code=status.HTTP_200_OK)
-def complete_task_instance(task_instance_id, payload: CompleteTaskInstanceRequest, current_user = Depends(get_current_user), task_instance_service:TaskInstanceServiceInterface = Depends(get_task_instance_service)):
-  task_instance = task_instance_service.complete_task_instance(task_instance_id=task_instance_id, user_id= current_user.id, completion_level= payload.completion_level)
-  return task_instance
+def complete_task_instance(
+  task_instance_id: int,
+  payload: CompleteTaskInstanceRequest,
+  current_user=Depends(get_current_user),
+  mediator: Mediator = Depends(get_complete_task_instance_mediator),
+):
+  result = mediator.send(CompleteTaskInstanceCommand(
+    task_instance_id=task_instance_id,
+    user_id=current_user.id,
+    completion_level=payload.completion_level,
+  ))
+  return CompleteTaskInstanceResponse.model_validate(
+    result,
+    from_attributes=True,
+  )
 
 @router.get("/task_instances/month",
              response_model=list[TaskInstanceResponse], status_code=status.HTTP_200_OK)
