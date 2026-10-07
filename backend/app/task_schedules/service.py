@@ -1,6 +1,7 @@
 from app.tasks.interfaces import TaskServiceInterface
+from app.task_schedules.dtos import CreateTaskScheduleDTO
 from app.task_schedules.repository import TaskScheduleRepository
-from app.task_schedules.schemas import CreateTaskScheduleRequest, UpdateTaskScheduleRequest
+from app.task_schedules.schemas import UpdateTaskScheduleRequest
 from app.task_schedules.schemas import WeeklyValue, MonthlyValue
 from app.task_schedules.models import ScheduleType
 
@@ -12,7 +13,7 @@ class TaskScheduleService:
     self.task_service = task_service
 
 
-  def create_task_schedule(self, task_id, user_id, payload: CreateTaskScheduleRequest):
+  def create_task_schedule(self, task_id, user_id, payload: CreateTaskScheduleDTO):
     task = self.task_service.get_task_by_id(task_id=task_id, user_id=user_id)
 
     self._validate_schedule_value(

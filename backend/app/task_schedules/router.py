@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, status
 
 from app.auth.dependencies import get_current_user
+from app.task_schedules.dtos import CreateTaskScheduleDTO
 from app.task_schedules.schemas import CreateTaskScheduleRequest, UpdateTaskScheduleRequest, TaskScheduleResponse
 from app.task_schedules.interfaces import TaskScheduleServiceInterface
 from app.task_schedules.dependencies import get_task_schedule_service
@@ -15,7 +16,7 @@ def create_task(task_id,
   return task_schedule_service.create_task_schedule(
     task_id = task_id,
     user_id = current_user.id,
-    payload = payload
+    payload = CreateTaskScheduleDTO(**payload.model_dump())
   )
 
 @router.get('/tasks/{task_id}/task_schedules', response_model=list[TaskScheduleResponse], status_code = status.HTTP_200_OK)

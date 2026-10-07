@@ -1,10 +1,11 @@
 from typing import Protocol
 import uuid
+from app.task_schedules.dtos import CreateTaskScheduleDTO
 from app.task_schedules.models import TaskSchedule
-from app.task_schedules.schemas import CreateTaskScheduleRequest, UpdateTaskScheduleRequest
+from app.task_schedules.schemas import UpdateTaskScheduleRequest
 
 class TaskScheduleServiceInterface(Protocol):
-  def create_task_schedule(self, task_id: int, user_id: uuid.UUID, payload: CreateTaskScheduleRequest) -> TaskSchedule:
+  def create_task_schedule(self, task_id: int, user_id: uuid.UUID, payload: CreateTaskScheduleDTO) -> TaskSchedule:
     ...
 
   def list_all_task_schedules(self) -> list[TaskSchedule]:
