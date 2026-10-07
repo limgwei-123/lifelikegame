@@ -37,6 +37,17 @@ class TaskInstanceRepository:
   def get_by_id_and_user_id(self, task_instance_id, user_id):
     return self.db.query(TaskInstance).filter(TaskInstance.id == task_instance_id, TaskInstance.user_id == user_id).first()
 
+  def get_by_id_and_user_id_for_update(self, task_instance_id, user_id):
+    return (
+      self.db.query(TaskInstance)
+      .filter(
+        TaskInstance.id == task_instance_id,
+        TaskInstance.user_id == user_id,
+      )
+      .with_for_update()
+      .first()
+    )
+
 
   def update(self, task_instance: TaskInstance) -> TaskInstance:
 

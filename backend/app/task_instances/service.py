@@ -85,7 +85,12 @@ class TaskInstanceService:
       user_id,
       completion_level: str
   ):
-    task_instance = self.get_task_instance_by_id(task_instance_id=task_instance_id, user_id=user_id)
+    task_instance = self.task_instance_repo.get_by_id_and_user_id_for_update(
+      task_instance_id=task_instance_id,
+      user_id=user_id,
+    )
+    if not task_instance:
+      raise NotFoundError("Task Instance not found")
 
     scoring_snapshot = task_instance.scoring_snapshot_json or {}
     if completion_level not in scoring_snapshot:
