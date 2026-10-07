@@ -5,8 +5,8 @@ from app.core.behaviors import LoggingBehavior, TransactionBehavior, ValidationB
 from app.core.mediator import HandlerRegistry, Mediator
 from app.core.unit_of_work import build_unit_of_work
 from app.db import get_db, get_session
-from app.task_instances.commands import CompleteTaskInstanceCommand
-from app.task_instances.handlers import CompleteTaskInstanceCommandHandler
+from app.task_instances.commands import CompleteTaskInstanceCommand, GenerateDailyTaskInstancesCommand
+from app.task_instances.handlers import CompleteTaskInstanceCommandHandler, GenerateDailyTaskInstancesCommandHandler
 from app.task_instances.interfaces import TaskInstanceServiceInterface
 from app.task_instances.repository import TaskInstanceRepository
 from app.tasks.dependencies import build_task_service
@@ -63,3 +63,19 @@ def get_complete_task_instance_mediator(
     db: Session = Depends(get_session),
 ) -> Mediator:
   return build_complete_task_instance_mediator(db)
+
+
+def build_generate_task_instances_mediator(db: Session) -> Mediator:
+  handler_registry = HandlerRegistry()
+  handler_registry.register(
+    GenerateDailyTaskInstancesCommand,
+    GenerateDailyTaskInstancesCommandHandler(build_task_instance_service(db)),
+  )
+
+  return Mediator(
+    handler_registry,
+    behaviors=[
+      LoggingBehavior(),
+      TransactionBehavior(build_unit_of_work(db)),
+    ],
+  )
