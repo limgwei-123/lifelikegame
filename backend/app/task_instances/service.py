@@ -226,6 +226,7 @@ class TaskInstanceService:
       if schedule_day is None:
         return False
 
+      # Missing monthly dates are skipped, never clamped or carried forward.
       return target_date.day == schedule_day
 
     return False

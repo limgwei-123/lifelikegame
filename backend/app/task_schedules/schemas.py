@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from datetime import date,datetime
 import uuid
 from typing import Any, List
@@ -18,7 +18,7 @@ class WeeklyValue(BaseModel):
     days: List[int]
 
 class MonthlyValue(BaseModel):
-    day: int
+    day: int = Field(strict=True, ge=1, le=31)
 
 
 class CreateTaskScheduleRequest(BaseModel):

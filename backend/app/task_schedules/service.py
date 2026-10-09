@@ -4,8 +4,9 @@ from app.task_schedules.repository import TaskScheduleRepository
 from app.task_schedules.schemas import UpdateTaskScheduleRequest
 from app.task_schedules.schemas import WeeklyValue, MonthlyValue
 from app.task_schedules.models import ScheduleType
+from pydantic import ValidationError
 
-from app.errors.exception import NotFoundError
+from app.errors.exception import NotFoundError, RequestValidationError
 from app.task_schedules.models import TaskSchedule
 class TaskScheduleService:
   def __init__(self, task_schedule_repo: TaskScheduleRepository, task_service: TaskServiceInterface):
@@ -86,8 +87,11 @@ class TaskScheduleService:
           raise ValueError("each day must be between 0 and 6")
 
     elif schedule_type == ScheduleType.MONTHLY:
-      validated = MonthlyValue(**schedule_value_json)
-      day = validated.day
-
-      if day < 1 or day > 31:
-          raise ValueError("day must be between 1 and 31")
+      try:
+        MonthlyValue(**schedule_value_json)
+      except ValidationError as error:
+        raise RequestValidationError([{
+          "field": "schedule_value_json.day",
+          "message": "Monthly day must be an integer between 1 and 31",
+          "code": "monthly_day",
+        }]) from error
