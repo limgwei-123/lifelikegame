@@ -32,10 +32,6 @@ class GenerateDailyTaskInstancesCommandHandler:
       self,
       command: GenerateDailyTaskInstancesCommand,
   ) -> GenerateTaskInstancesResultDTO:
-    task_instances = self._task_instance_service.generate_task_instances_for_date(
+    return self._task_instance_service.generate_task_instances_with_summary(
       target_date=command.target_date,
-    )
-    return GenerateTaskInstancesResultDTO(
-      target_date=command.target_date,
-      task_instances=tuple(task_instances),
     )

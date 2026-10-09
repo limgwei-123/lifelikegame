@@ -2,7 +2,7 @@ from typing import Protocol
 from datetime import date
 import uuid
 from app.task_instances.models import TaskInstance
-from app.task_instances.dtos import CompleteTaskInstanceResultDTO
+from app.task_instances.dtos import CompleteTaskInstanceResultDTO, GenerateTaskInstancesResultDTO
 
 class TaskInstanceServiceInterface(Protocol):
   def get_task_instance_by_id(self, task_instance_id: int, user_id: uuid.UUID) -> TaskInstance:
@@ -18,6 +18,9 @@ class TaskInstanceServiceInterface(Protocol):
     ...
 
   def generate_task_instances_for_date(self, target_date: date) -> list[TaskInstance]:
+    ...
+
+  def generate_task_instances_with_summary(self, target_date: date) -> GenerateTaskInstancesResultDTO:
     ...
 
   def list_task_instances_by_date(self, user_id: uuid.UUID, date_instance: date) -> list[TaskInstance]:

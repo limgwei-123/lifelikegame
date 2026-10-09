@@ -17,7 +17,7 @@ from app.task_schedules.models import ScheduleType
 from app.errors.exception import ConflictError, NotFoundError
 from app.shared.enums import EntryType
 from app.point_ledgers.schemas import CreatePointLedgerRequest
-from app.task_instances.dtos import CompleteTaskInstanceResultDTO
+from app.task_instances.dtos import CompleteTaskInstanceResultDTO, GenerateTaskInstancesResultDTO
 
 class TaskInstanceService:
   def __init__(self, task_instance_repo: TaskInstanceRepository, task_service: TaskServiceInterface,
@@ -41,8 +41,12 @@ class TaskInstanceService:
 
   #use for cron
   def generate_task_instances_for_date(self, target_date):
+    return list(self.generate_task_instances_with_summary(target_date).task_instances)
+
+  def generate_task_instances_with_summary(self, target_date: date) -> GenerateTaskInstancesResultDTO:
     task_schedules = self.task_schedule_service.list_all_task_schedules()
     created_task_instance = []
+    created_count = 0
 
     for task_schedule in task_schedules:
       if not self._should_generate_for_date(task_schedule, target_date):
@@ -53,15 +57,21 @@ class TaskInstanceService:
       except NotFoundError:
         continue
 
-      task_instance = self._create_task_instance(
+      task_instance, was_created = self._create_task_instance_with_status(
         task=task,
         task_schedule=task_schedule,
         date_instance=target_date
       )
 
       created_task_instance.append(task_instance)
+      created_count += int(was_created)
 
-    return created_task_instance
+    return GenerateTaskInstancesResultDTO(
+      target_date=target_date,
+      task_instances=tuple(created_task_instance),
+      processed_count=len(task_schedules),
+      created_count=created_count,
+    )
 
 
   def list_task_instances_by_date(self, user_id, date_instance: date):
@@ -149,10 +159,16 @@ class TaskInstanceService:
 
 
   def _create_task_instance(self, task, task_schedule, date_instance):
+    task_instance, _ = self._create_task_instance_with_status(
+      task, task_schedule, date_instance,
+    )
+    return task_instance
+
+  def _create_task_instance_with_status(self, task, task_schedule, date_instance):
 
     existing = self.task_instance_repo.get_by_task_id_and_date_instance(task_id=task.id, date_instance=date_instance)
     if existing:
-      return existing
+      return existing, False
 
     task_instance = TaskInstance(
         user_id=task.user_id,
@@ -167,7 +183,7 @@ class TaskInstanceService:
     )
 
     try:
-      return self.task_instance_repo.create(task_instance)
+      return self.task_instance_repo.create(task_instance), True
     except IntegrityError as error:
       constraint_name = getattr(
         getattr(error.orig, "diag", None),

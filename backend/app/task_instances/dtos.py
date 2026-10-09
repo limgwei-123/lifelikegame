@@ -17,7 +17,5 @@ class CompleteTaskInstanceResultDTO:
 class GenerateTaskInstancesResultDTO:
   target_date: date
   task_instances: tuple[TaskInstance, ...]
-
-  @property
-  def created_count(self) -> int:
-    return len(self.task_instances)
+  processed_count: int
+  created_count: int
