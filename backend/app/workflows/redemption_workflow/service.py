@@ -9,7 +9,8 @@ from app.rewards.schemas import UpdateRewardRequest
 from app.point_ledgers.schemas import CreatePointLedgerRequest
 from app.redemptions.schemas import CreateRedemptionRequest
 
-from app.workflows.redemption_workflow.schemas import RedeemRewardResponse
+from app.workflows.redemption_workflow.dtos import RedeemRewardResultDTO
+import uuid
 
 
 from app.shared.function import get_scoring_scheme_workflow
@@ -25,7 +26,7 @@ class RedemptionWorkflowService:
     self.user_service = user_service
     self.point_ledger_service = point_ledger_service
 
-  def redemption_workflow(self,reward_id, user_id):
+  def redemption_workflow(self, reward_id: int, user_id: uuid.UUID) -> RedeemRewardResultDTO:
 
     # Serialize a user's spending, then lock the reward and refresh cached state.
     user = self.user_service.get_user_by_id_for_update(user_id=user_id)
@@ -55,7 +56,7 @@ class RedemptionWorkflowService:
       source_id=redemption.id,
     ))
 
-    return RedeemRewardResponse(
+    return RedeemRewardResultDTO(
       redemption_id=redemption.id,
       reward_id=reward.id,
       reward_title=reward.title,

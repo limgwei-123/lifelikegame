@@ -37,7 +37,8 @@ def _headers(user_id):
 
 
 @pytest.mark.parametrize("same_reward", [True, False])
-def test_parallel_redemptions_do_not_duplicate_or_overspend(db, redemption_case, same_reward):
+@pytest.mark.parametrize("entrypoint", ["service", "command"])
+def test_parallel_redemptions_do_not_duplicate_or_overspend(db, redemption_case, same_reward, entrypoint):
     case = redemption_case
     bind = db.get_bind()
     barrier = Barrier(2)
@@ -53,10 +54,18 @@ def test_parallel_redemptions_do_not_duplicate_or_overspend(db, redemption_case,
             assert cached_reward.status == "available"
             barrier.wait(timeout=10)
             try:
-                with build_unit_of_work(session).begin():
-                    build_redemption_workflow_service(session).redemption_workflow(
+                if entrypoint == "command":
+                    from app.workflows.redemption_workflow.commands import RedeemRewardCommand
+                    from app.workflows.redemption_workflow.dependencies import build_redeem_reward_mediator
+
+                    build_redeem_reward_mediator(session).send(RedeemRewardCommand(
                         reward_id=reward_id, user_id=case["user_id"],
-                    )
+                    ))
+                else:
+                    with build_unit_of_work(session).begin():
+                        build_redemption_workflow_service(session).redemption_workflow(
+                            reward_id=reward_id, user_id=case["user_id"],
+                        )
                 return "success"
             except ConflictError:
                 return "conflict"

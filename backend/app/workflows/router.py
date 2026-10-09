@@ -9,8 +9,8 @@ from app.workflows.task_workflow.dependencies import get_create_task_with_schedu
 from app.workflows.task_workflow.dtos import CreateTaskWithScheduleDTO
 from app.workflows.task_workflow.interfaces import TaskWorkflowServiceInterface
 
-from app.workflows.redemption_workflow.dependencies import get_redemption_workflow_service
-from app.workflows.redemption_workflow.interfaces import RedemptionWorkflowServiceInterface
+from app.workflows.redemption_workflow.commands import RedeemRewardCommand
+from app.workflows.redemption_workflow.dependencies import get_redeem_reward_mediator
 
 from app.workflows.task_workflow.schemas import (
     CreateTaskWithScheduleRequest,
@@ -55,12 +55,13 @@ def create_task_with_schedule(
 def redemption_workflow(
     reward_id: int,
     current_user=Depends(get_current_user),
-    redemption_workflow_service: RedemptionWorkflowServiceInterface = Depends(get_redemption_workflow_service)
+    mediator: Mediator = Depends(get_redeem_reward_mediator),
 ):
-    return redemption_workflow_service.redemption_workflow(
+    result = mediator.send(RedeemRewardCommand(
         reward_id=reward_id,
-        user_id=current_user.id
-    )
+        user_id=current_user.id,
+    ))
+    return RedeemRewardResponse.model_validate(result, from_attributes=True)
 
 
 @router.post(
