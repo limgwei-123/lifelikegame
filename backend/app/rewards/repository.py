@@ -1,4 +1,5 @@
 from app.rewards.models import Reward
+from datetime import datetime, timezone
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from app.shared.enums import RewardStatus
@@ -13,16 +14,19 @@ class RewardRepository:
     return reward
 
   def list_by_user_id(self, user_id):
-    return self.db.query(Reward).filter(Reward.user_id == user_id).all()
+    return self._query().filter(Reward.user_id == user_id).all()
+
+  def _query(self):
+    return self.db.query(Reward).filter(Reward.deleted_at.is_(None))
 
   def get_by_id(self, reward_id):
-    return self.db.query(Reward).filter(Reward.id == reward_id).first()
+    return self._query().filter(Reward.id == reward_id).first()
 
   def get_by_id_and_user_id(self, reward_id, user_id):
-    return self.db.query(Reward).filter(Reward.id == reward_id, Reward.user_id == user_id).first()
+    return self._query().filter(Reward.id == reward_id, Reward.user_id == user_id).first()
 
   def get_available_reward_by_id_and_user_id(self, reward_id, user_id):
-    return self.db.query(Reward).filter(Reward.id == reward_id, Reward.user_id == user_id, Reward.status == RewardStatus.AVAILABLE).first()
+    return self._query().filter(Reward.id == reward_id, Reward.user_id == user_id, Reward.status == RewardStatus.AVAILABLE).first()
 
   def update(self, reward: Reward):
 
@@ -31,5 +35,5 @@ class RewardRepository:
     return reward
 
   def delete(self, reward: Reward):
-    self.db.delete(reward)
+    reward.deleted_at = datetime.now(timezone.utc)
     self.db.flush()

@@ -8,6 +8,9 @@ class UserService:
   def get_user_by_email(self, email: str) -> User | None:
     return self.user_repo.get_by_email(email)
 
+  def is_email_registered(self, email: str) -> bool:
+    return self.user_repo.is_email_registered(email)
+
   def get_user_by_id(self, user_id: str) -> User | None:
     return self.user_repo.get_by_id(user_id)
 

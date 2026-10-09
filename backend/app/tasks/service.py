@@ -49,6 +49,12 @@ class TaskService:
   def update_task(self, task_id, user_id, data: UpdateTaskDTO):
     task = self.get_task_by_id(task_id=task_id, user_id=user_id)
 
+    scoring_scheme_id = data.changes.get("scoring_scheme_id")
+    if scoring_scheme_id is not None:
+      scoring_scheme = self.scoring_scheme_service.get_scoring_scheme_by_id(scoring_scheme_id)
+      if scoring_scheme is None:
+        raise NotFoundError("Scoring Scheme not found")
+
     for field, value in data.changes.items():
         setattr(task, field, value)
 

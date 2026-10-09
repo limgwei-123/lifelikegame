@@ -8,8 +8,7 @@ class AuthService:
     self.user_service = user_service
 
   def signup_user(self, email: str, password: str):
-    existing_user = self.user_service.get_user_by_email(email)
-    if existing_user:
+    if self.user_service.is_email_registered(email):
       raise ConflictError("Email already registered")
 
     password_hash = hash_password(password)

@@ -10,19 +10,25 @@ class UserRepository:
 
     def get_by_email(self, email: str) -> User | None:
         result = self.db.execute(
-            select(User).where(User.email == email)
+            select(User).where(User.email == email, User.deleted_at.is_(None))
         )
         return result.scalar_one_or_none()
 
     def get_by_id(self, user_id: str) -> User | None:
-        return self.db.get(User, user_id)
+        return self.db.execute(
+            select(User).where(User.id == user_id, User.deleted_at.is_(None))
+        ).scalar_one_or_none()
+
+    def is_email_registered(self, email: str) -> bool:
+        # Deleted accounts retain their email reservation, but cannot log in.
+        return self.db.query(User.id).filter(User.email == email).first() is not None
 
     def update_user_point(self, user_id, delta):
-        self.db.query(User).filter(User.id == user_id).update(
+        self.db.query(User).filter(User.id == user_id, User.deleted_at.is_(None)).update(
         {User.current_value: User.current_value + delta}
         )
         self.db.flush()
-        user = self.db.query(User).filter(User.id == user_id).first()
+        user = self.get_by_id(user_id)
         return user
 
     def update(self, user: User):

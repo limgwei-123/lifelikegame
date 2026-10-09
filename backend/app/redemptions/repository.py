@@ -12,10 +12,13 @@ class RedemptionRepository:
     return redemption
 
   def list_by_user_id(self, user_id):
-    return self.db.query(Redemption).filter(Redemption.user_id == user_id).all()
+    return self._query().filter(Redemption.user_id == user_id).all()
+
+  def _query(self):
+    return self.db.query(Redemption).filter(Redemption.deleted_at.is_(None))
 
   def get_by_id(self, redemption_id):
-    return self.db.query(Redemption).filter(Redemption.id == redemption_id).first()
+    return self._query().filter(Redemption.id == redemption_id).first()
 
   def get_by_id_and_user_id(self, redemption_id, user_id):
-    return self.db.query(Redemption).filter(Redemption.id == redemption_id, Redemption.user_id == user_id).first()
+    return self._query().filter(Redemption.id == redemption_id, Redemption.user_id == user_id).first()

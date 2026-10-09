@@ -35,6 +35,9 @@ def login(payload: LoginRequest, auth_service: AuthServiceInterface = Depends(ge
     password=payload.password
   )
 
+  if user is None:
+    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+
   token = create_access_token(sub=str(user.id))
 
   return TokenResponse(

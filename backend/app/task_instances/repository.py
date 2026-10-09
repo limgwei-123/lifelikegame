@@ -14,32 +14,35 @@ class TaskInstanceRepository:
     return task_instance
 
   def list_by_task_id(self, task_id):
-    return self.db.query(TaskInstance).filter(TaskInstance.task_id == task_id).order_by(TaskInstance.created_at.asc()).all()
+    return self._query().filter(TaskInstance.task_id == task_id).order_by(TaskInstance.created_at.asc()).all()
+
+  def _query(self):
+    return self.db.query(TaskInstance).filter(TaskInstance.deleted_at.is_(None))
 
   def list_by_user_id(self, user_id):
-    return self.db.query(TaskInstance).filter(TaskInstance.user_id == user_id).order_by(TaskInstance.created_at.asc()).all()
+    return self._query().filter(TaskInstance.user_id == user_id).order_by(TaskInstance.created_at.asc()).all()
 
   def get_by_task_id_and_date_instance(self, task_id, date_instance):
-    return self.db.query(TaskInstance).filter(TaskInstance.task_id == task_id, TaskInstance.date_instance == date_instance).first()
+    return self._query().filter(TaskInstance.task_id == task_id, TaskInstance.date_instance == date_instance).first()
 
   def list_by_user_id_between_date(self, user_id,start_date, end_date):
 
-    return self.db.query(TaskInstance).filter(TaskInstance.user_id == user_id).filter(TaskInstance.date_instance >= start_date).filter(TaskInstance.date_instance <= end_date).order_by(TaskInstance.date_instance.asc()).all()
+    return self._query().filter(TaskInstance.user_id == user_id).filter(TaskInstance.date_instance >= start_date).filter(TaskInstance.date_instance <= end_date).order_by(TaskInstance.date_instance.asc()).all()
 
 
 
   def list_by_user_id_and_date(self, user_id, date_instance):
-    return self.db.query(TaskInstance).filter(TaskInstance.user_id == user_id, TaskInstance.date_instance == date_instance).all()
+    return self._query().filter(TaskInstance.user_id == user_id, TaskInstance.date_instance == date_instance).all()
 
   def get_by_id(self, task_instance_id):
-    return self.db.query(TaskInstance).filter(TaskInstance.id == task_instance_id).first()
+    return self._query().filter(TaskInstance.id == task_instance_id).first()
 
   def get_by_id_and_user_id(self, task_instance_id, user_id):
-    return self.db.query(TaskInstance).filter(TaskInstance.id == task_instance_id, TaskInstance.user_id == user_id).first()
+    return self._query().filter(TaskInstance.id == task_instance_id, TaskInstance.user_id == user_id).first()
 
   def get_by_id_and_user_id_for_update(self, task_instance_id, user_id):
     return (
-      self.db.query(TaskInstance)
+      self._query()
       .filter(
         TaskInstance.id == task_instance_id,
         TaskInstance.user_id == user_id,

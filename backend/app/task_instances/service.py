@@ -107,6 +107,8 @@ class TaskInstanceService:
     if not task_instance:
       raise NotFoundError("Task Instance not found")
 
+    self.task_service.get_task_by_id(task_id=task_instance.task_id, user_id=user_id)
+
     scoring_snapshot = task_instance.scoring_snapshot_json or {}
     if completion_level not in scoring_snapshot:
       raise ValueError("Invalid completion level")

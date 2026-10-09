@@ -14,16 +14,21 @@ class PointLedgerRepository:
     return point_ledger
 
   def list_by_user_id(self, user_id):
-    return self.db.query(PointLedger).filter(PointLedger.user_id == user_id).all()
+    return self._query().filter(PointLedger.user_id == user_id).all()
+
+  def _query(self):
+    return self.db.query(PointLedger).filter(PointLedger.deleted_at.is_(None))
 
   def get_by_id(self, point_ledger_id):
-    return self.db.query(PointLedger).filter(PointLedger.id == point_ledger_id).first()
+    return self._query().filter(PointLedger.id == point_ledger_id).first()
 
   def get_by_id_and_user_id(self, point_ledger_id, user_id):
-    return self.db.query(PointLedger).filter(PointLedger.id == point_ledger_id, PointLedger.user_id == user_id).first()
+    return self._query().filter(PointLedger.id == point_ledger_id, PointLedger.user_id == user_id).first()
 
   def get_balance_by_user_id(self, user_id):
     balance = (
-      self.db.query(func.coalesce(func.sum(PointLedger.delta), 0)).filter(PointLedger.user_id == user_id).scalar()
+      self.db.query(func.coalesce(func.sum(PointLedger.delta), 0)).filter(
+        PointLedger.user_id == user_id, PointLedger.deleted_at.is_(None),
+      ).scalar()
     )
     return int(balance or 0)
