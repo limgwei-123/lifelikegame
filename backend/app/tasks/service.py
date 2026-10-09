@@ -19,7 +19,7 @@ class TaskService:
   def create_task(self, goal_id, user_id, payload: CreateTaskDTO):
     goal = self.goal_service.get_goal_by_id(goal_id=goal_id, user_id=user_id)
 
-    scoring_scheme = get_scoring_scheme_workflow(scoring_scheme_id=payload.scoring_scheme_id,scoring_scheme_service=self.scoring_scheme_service)
+    scoring_scheme = get_scoring_scheme_workflow(scoring_scheme_id=payload.scoring_scheme_id,scoring_scheme_service=self.scoring_scheme_service, user_id=user_id)
 
     task = Task(
       title= payload.title,
@@ -51,9 +51,7 @@ class TaskService:
 
     scoring_scheme_id = data.changes.get("scoring_scheme_id")
     if scoring_scheme_id is not None:
-      scoring_scheme = self.scoring_scheme_service.get_scoring_scheme_by_id(scoring_scheme_id)
-      if scoring_scheme is None:
-        raise NotFoundError("Scoring Scheme not found")
+      self.scoring_scheme_service.get_usable_scoring_scheme_by_id(scoring_scheme_id, user_id)
 
     for field, value in data.changes.items():
         setattr(task, field, value)

@@ -31,6 +31,8 @@ class TaskInstanceService:
   def create_task_instance_for_date(self, task_id, task_schedule_id, user_id, date_instance):
     task = self.task_service.get_task_by_id(task_id=task_id, user_id=user_id)
     task_schedule = self.task_schedule_service.get_task_schedule_by_id(task_schedule_id=task_schedule_id, user_id=user_id)
+    if task_schedule.task_id != task.id:
+      raise NotFoundError("Task Schedule not found")
 
     return self._create_task_instance(
       task=task,
@@ -45,6 +47,14 @@ class TaskInstanceService:
 
   def generate_task_instances_with_summary(self, target_date: date) -> GenerateTaskInstancesResultDTO:
     task_schedules = self.task_schedule_service.list_task_schedules_for_generation()
+    return self._generate_task_instances_from_schedules(target_date, task_schedules)
+
+  def generate_task_instances_for_user(self, target_date: date, user_id) -> list[TaskInstance]:
+    task_schedules = self.task_schedule_service.list_task_schedules_by_user_id(user_id)
+    result = self._generate_task_instances_from_schedules(target_date, task_schedules)
+    return list(result.task_instances)
+
+  def _generate_task_instances_from_schedules(self, target_date, task_schedules):
     created_task_instance = []
     created_count = 0
 
@@ -55,6 +65,9 @@ class TaskInstanceService:
       try:
         task = self.task_service.get_task_by_id(task_id=task_schedule.task_id, user_id=task_schedule.user_id)
       except NotFoundError:
+        continue
+
+      if not task.is_active:
         continue
 
       task_instance, was_created = self._create_task_instance_with_status(

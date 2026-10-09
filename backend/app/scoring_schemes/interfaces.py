@@ -16,6 +16,9 @@ class ScoringSchemeServiceInterface(Protocol):
   def get_scoring_scheme_by_id(self, scoring_scheme_id: int) -> ScoringScheme:
     ...
 
+  def get_usable_scoring_scheme_by_id(self, scoring_scheme_id: int, user_id: uuid.UUID) -> ScoringScheme:
+    ...
+
   def update_scoring_scheme(self, scoring_scheme_id: int, user_id: uuid.UUID, data: UpdateScoringSchemeRequest) -> ScoringScheme:
     ...
 

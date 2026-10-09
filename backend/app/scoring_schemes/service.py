@@ -24,6 +24,13 @@ class ScoringSchemeService:
     scoring_scheme = self.scoring_scheme_repo.get_by_id(scoring_scheme_id=scoring_scheme_id)
     return scoring_scheme
 
+  def get_usable_scoring_scheme_by_id(self, scoring_scheme_id, user_id):
+    scoring_scheme = self.get_scoring_scheme_by_id(scoring_scheme_id)
+    # A null owner identifies a shared system scheme, not another user's data.
+    if scoring_scheme is None or scoring_scheme.user_id not in (None, user_id):
+      raise NotFoundError("Scoring Scheme not found")
+    return scoring_scheme
+
   def get_scoring_scheme_by_user_id_and_id(self, scoring_scheme_id, user_id):
     scoring_scheme = self.scoring_scheme_repo.get_by_id_and_user_id(scoring_scheme_id=scoring_scheme_id, user_id=user_id)
     if not scoring_scheme:

@@ -27,7 +27,7 @@ class TaskWorkflowService:
 
   def create_task_with_schedule(self, goal_id, user_id, payload: CreateTaskWithScheduleDTO):
 
-    scoring_scheme = get_scoring_scheme_workflow(scoring_scheme_id=payload.task.scoring_scheme_id,scoring_scheme_service=self.scoring_scheme_service)
+    scoring_scheme = get_scoring_scheme_workflow(scoring_scheme_id=payload.task.scoring_scheme_id,scoring_scheme_service=self.scoring_scheme_service, user_id=user_id)
 
     task_payload = replace(
       payload.task,
@@ -58,7 +58,7 @@ class TaskWorkflowService:
           date_instance=schedule.start_date
         )
 
-      generate_task_instances_for_today(task_instance_service=self.task_instance_service)
+      generate_task_instances_for_today(task_instance_service=self.task_instance_service, user_id=user_id)
 
       task.schedule = schedule
 
@@ -91,7 +91,7 @@ class TaskWorkflowService:
         from_attributes=True,
       ))
 
-    generate_task_instances_for_today(task_instance_service=self.task_instance_service)
+    generate_task_instances_for_today(task_instance_service=self.task_instance_service, user_id=user_id)
 
     return GoalTaskSchduleResponse(
       goal=goal,

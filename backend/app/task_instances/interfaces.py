@@ -23,6 +23,9 @@ class TaskInstanceServiceInterface(Protocol):
   def generate_task_instances_with_summary(self, target_date: date) -> GenerateTaskInstancesResultDTO:
     ...
 
+  def generate_task_instances_for_user(self, target_date: date, user_id: uuid.UUID) -> list[TaskInstance]:
+    ...
+
   def list_task_instances_by_date(self, user_id: uuid.UUID, date_instance: date) -> list[TaskInstance]:
     ...
 

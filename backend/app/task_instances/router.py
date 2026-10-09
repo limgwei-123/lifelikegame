@@ -28,9 +28,10 @@ def create_task_instance_for_date(task_id,task_schedule_id, payload: CreateTaskI
 @router.post("/tasks_instances/generate", response_model=list[TaskInstanceResponse], status_code=status.HTTP_201_CREATED)
 def generate_task_instances_for_date(
   payload: CreateTaskInstanceRequest,
+  current_user = Depends(get_current_user),
   task_instance_service: TaskInstanceServiceInterface = Depends(get_task_instance_service)
 ):
-  return task_instance_service.generate_task_instances_for_date(target_date=payload.date_instance)
+  return task_instance_service.generate_task_instances_for_user(target_date=payload.date_instance, user_id=current_user.id)
 
 
 @router.post("/task_instances/{task_instance_id}/complete", response_model=CompleteTaskInstanceResponse, status_code=status.HTTP_200_OK)
