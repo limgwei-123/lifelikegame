@@ -44,7 +44,7 @@ class TaskInstanceService:
     return list(self.generate_task_instances_with_summary(target_date).task_instances)
 
   def generate_task_instances_with_summary(self, target_date: date) -> GenerateTaskInstancesResultDTO:
-    task_schedules = self.task_schedule_service.list_all_task_schedules()
+    task_schedules = self.task_schedule_service.list_task_schedules_for_generation()
     created_task_instance = []
     created_count = 0
 

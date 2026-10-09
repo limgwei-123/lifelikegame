@@ -20,6 +20,11 @@ class TaskScheduleRepository:
   def list_all(self):
     return self._query().all()
 
+  def list_for_generation(self):
+    return self._query().filter(
+      TaskSchedule.task.has(Task.is_active.is_(True)),
+    ).all()
+
   def _query(self):
     return self.db.query(TaskSchedule).filter(
       TaskSchedule.deleted_at.is_(None),

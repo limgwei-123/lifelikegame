@@ -11,6 +11,9 @@ class TaskScheduleServiceInterface(Protocol):
   def list_all_task_schedules(self) -> list[TaskSchedule]:
     ...
 
+  def list_task_schedules_for_generation(self) -> list[TaskSchedule]:
+    ...
+
   def list_task_schedules_by_task_id(self, task_id: int, user_id: uuid.UUID) -> list[TaskSchedule]:
     ...
 

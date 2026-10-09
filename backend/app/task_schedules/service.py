@@ -35,6 +35,9 @@ class TaskScheduleService:
   def list_all_task_schedules(self):
     return self.task_schedule_repo.list_all()
 
+  def list_task_schedules_for_generation(self):
+    return self.task_schedule_repo.list_for_generation()
+
   def list_task_schedules_by_task_id(self, task_id, user_id):
     task = self.task_service.get_task_by_id(task_id=task_id, user_id=user_id)
     return self.task_schedule_repo.list_by_task_id(task.id)

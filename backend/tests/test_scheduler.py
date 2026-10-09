@@ -12,6 +12,7 @@ from app.task_instances.handlers import GenerateDailyTaskInstancesCommandHandler
 from app.core.behaviors import get_request_id
 from app.task_instances.models import TaskInstance
 from app.task_instances.repository import TaskInstanceRepository
+from app.task_schedules.repository import TaskScheduleRepository
 
 
 class FakeSession:
@@ -110,6 +111,57 @@ def test_generation_summary_counts_only_new_rows(db, task_schedule):
     assert second.created_count == 0
     assert second.processed_count == first.processed_count
     assert len(second.task_instances) == len(first.task_instances)
+
+
+def test_inactive_task_stays_manageable_and_generation_resumes_without_duplicates(
+    client, auth_headers, db, task, task_schedule, task_instance,
+):
+    assert client.post(
+        f"/tasks/{task['id']}", headers=auth_headers, json={"is_active": False},
+    ).status_code == 200
+    assert client.get(f"/tasks/{task['id']}", headers=auth_headers).status_code == 200
+    assert task_schedule["id"] in {
+        row["id"] for row in client.get("/task_schedules", headers=auth_headers).json()
+    }
+    assert TaskScheduleRepository(db).get_by_id(task_schedule["id"]) is not None
+
+    mediator = build_generate_task_instances_mediator(db)
+    command = GenerateDailyTaskInstancesCommand(target_date=date(2041, 7, 10))
+    disabled = mediator.send(command)
+    assert task["id"] not in {row.task_id for row in disabled.task_instances}
+    assert db.query(TaskInstance).filter(
+        TaskInstance.task_id == task["id"], TaskInstance.date_instance == command.target_date,
+    ).count() == 0
+    assert db.get(TaskInstance, task_instance["id"]) is not None
+
+    assert client.post(
+        f"/tasks/{task['id']}", headers=auth_headers, json={"is_active": True},
+    ).status_code == 200
+    enabled = mediator.send(command)
+    instance = next(row for row in enabled.task_instances if row.task_id == task["id"])
+    assert enabled.processed_count == disabled.processed_count + 1
+    assert enabled.created_count == 1
+    repeated = mediator.send(command)
+    assert repeated.created_count == 0
+    assert next(row.id for row in repeated.task_instances if row.task_id == task["id"]) == instance.id
+    assert db.query(TaskInstance).filter(
+        TaskInstance.task_id == task["id"], TaskInstance.date_instance == command.target_date,
+    ).count() == 1
+
+
+def test_generate_endpoint_skips_inactive_tasks(client, auth_headers, db, task, task_schedule):
+    assert client.post(
+        f"/tasks/{task['id']}", headers=auth_headers, json={"is_active": False},
+    ).status_code == 200
+    response = client.post(
+        "/tasks_instances/generate", headers=auth_headers,
+        json={"date_instance": "2041-07-11"},
+    )
+    assert response.status_code == 201
+    assert task["id"] not in {row["task_id"] for row in response.json()}
+    assert db.query(TaskInstance).filter(
+        TaskInstance.task_id == task["id"], TaskInstance.date_instance == date(2041, 7, 11),
+    ).count() == 0
 
 
 @pytest.mark.parametrize("failure_stage", ["insert", "commit"])
