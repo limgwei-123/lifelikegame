@@ -6,13 +6,15 @@ import pytest
 
 from app import scheduler as scheduler_module
 from app.task_instances.commands import GenerateDailyTaskInstancesCommand
-from app.task_instances.dependencies import build_generate_task_instances_mediator
+from app.task_instances.dependencies import build_generate_task_instances_mediator, build_task_instance_service
 from app.task_instances.dtos import GenerateTaskInstancesResultDTO
 from app.task_instances.handlers import GenerateDailyTaskInstancesCommandHandler
 from app.core.behaviors import get_request_id
 from app.task_instances.models import TaskInstance
 from app.task_instances.repository import TaskInstanceRepository
 from app.task_schedules.repository import TaskScheduleRepository
+from app.task_schedules.models import TaskSchedule
+from app.shared.enums import ScheduleType
 
 
 class FakeSession:
@@ -162,6 +164,89 @@ def test_generate_endpoint_skips_inactive_tasks(client, auth_headers, db, task, 
     assert db.query(TaskInstance).filter(
         TaskInstance.task_id == task["id"], TaskInstance.date_instance == date(2041, 7, 11),
     ).count() == 0
+
+
+@pytest.mark.parametrize("days,target_date,expected", [
+    ([0, 6], date(2026, 10, 5), True),
+    ([0, 6], date(2026, 10, 6), False),
+    ([0, 6], date(2026, 10, 7), False),
+    ([0, 6], date(2026, 10, 8), False),
+    ([0, 6], date(2026, 10, 9), False),
+    ([0, 6], date(2026, 10, 10), False),
+    ([0, 6], date(2026, 10, 11), True),
+    ([0, 6], date(2026, 10, 12), True),
+    ([0], date(2026, 10, 11), False),
+    ([6], date(2026, 10, 5), False),
+    ([], date(2026, 10, 5), False),
+])
+def test_weekly_generation_matches_selected_weekdays(db, days, target_date, expected):
+    schedule = TaskSchedule(
+        schedule_type=ScheduleType.WEEKLY, schedule_value_json={"days": days},
+        start_date=None, end_date=None,
+    )
+    assert build_task_instance_service(db)._should_generate_for_date(schedule, target_date) is expected
+
+
+@pytest.mark.parametrize("schedule_type,value", [
+    (ScheduleType.DAILY, {}),
+    (ScheduleType.WEEKLY, {"days": [0]}),
+    (ScheduleType.MONTHLY, {"day": 5}),
+])
+@pytest.mark.parametrize("start_date,end_date,expected", [
+    (None, None, True),
+    (date(2026, 10, 6), None, False),
+    (date(2026, 10, 5), None, True),
+    (None, date(2026, 10, 4), False),
+    (None, date(2026, 10, 5), True),
+    (date(2026, 10, 5), date(2026, 10, 5), True),
+])
+def test_generation_date_range_is_inclusive(
+    db, schedule_type, value, start_date, end_date, expected,
+):
+    schedule = TaskSchedule(
+        schedule_type=schedule_type, schedule_value_json=value,
+        start_date=start_date, end_date=end_date,
+    )
+    assert build_task_instance_service(db)._should_generate_for_date(schedule, date(2026, 10, 5)) is expected
+
+
+@pytest.mark.parametrize("schedule_type,value,end_date,dates,expected_dates", [
+    ("daily", {}, "2027-01-01",
+     [date(2026, 12, 30), date(2026, 12, 31), date(2027, 1, 1), date(2027, 1, 2)],
+     [date(2026, 12, 31), date(2027, 1, 1)]),
+    ("weekly", {"days": [3, 4]}, "2027-01-01",
+     [date(2026, 12, 24), date(2026, 12, 31), date(2027, 1, 1), date(2027, 1, 7)],
+     [date(2026, 12, 31), date(2027, 1, 1)]),
+    ("monthly", {"day": 31}, "2027-01-31",
+     [date(2026, 10, 31), date(2026, 12, 31), date(2027, 1, 1), date(2027, 1, 31), date(2027, 3, 31)],
+     [date(2026, 12, 31), date(2027, 1, 31)]),
+])
+def test_generation_persists_only_eligible_dates_across_year_boundary(
+    client, auth_headers, db, task, task_schedule,
+    schedule_type, value, end_date, dates, expected_dates,
+):
+    response = client.post(
+        f"/task_schedules/{task_schedule['id']}", headers=auth_headers,
+        json={"schedule_type": schedule_type, "schedule_value_json": value,
+              "start_date": "2026-12-31", "end_date": end_date},
+    )
+    assert response.status_code == 200
+    mediator = build_generate_task_instances_mediator(db)
+    for target_date in dates:
+        result = mediator.send(GenerateDailyTaskInstancesCommand(target_date=target_date))
+        instances = [row for row in result.task_instances if row.task_id == task["id"]]
+        if target_date in expected_dates:
+            assert len(instances) == 1
+            assert instances[0].date_instance == target_date
+        else:
+            assert instances == []
+
+    repeated = mediator.send(GenerateDailyTaskInstancesCommand(target_date=expected_dates[-1]))
+    assert repeated.created_count == 0
+    stored_dates = [row.date_instance for row in db.query(TaskInstance).filter(
+        TaskInstance.task_id == task["id"],
+    ).order_by(TaskInstance.date_instance).all()]
+    assert stored_dates == expected_dates
 
 
 @pytest.mark.parametrize("failure_stage", ["insert", "commit"])
