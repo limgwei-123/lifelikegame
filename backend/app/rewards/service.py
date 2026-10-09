@@ -30,6 +30,12 @@ class RewardService:
   def get_available_reward(self, reward_id, user_id):
     return self.reward_repo.get_available_reward_by_id_and_user_id(reward_id=reward_id, user_id=user_id)
 
+  def get_reward_by_id_for_update(self, reward_id, user_id):
+    reward = self.reward_repo.get_by_id_and_user_id_for_update(reward_id=reward_id, user_id=user_id)
+    if not reward:
+      raise NotFoundError("Reward not found")
+    return reward
+
   def update_reward(self, reward_id, user_id, data: UpdateRewardRequest):
     reward = self.get_reward_by_id(reward_id=reward_id, user_id=user_id)
 

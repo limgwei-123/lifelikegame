@@ -1,6 +1,6 @@
 import uuid
 from typing import TYPE_CHECKING
-from sqlalchemy import ForeignKey, DateTime, Integer, JSON
+from sqlalchemy import ForeignKey, DateTime, Integer, JSON, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime
 
@@ -9,8 +9,12 @@ from app.db import Base
 if TYPE_CHECKING:
   from app.models import *
 
+REDEMPTION_REWARD_UNIQUE_CONSTRAINT = "uq_redemptions_reward_id"
+
 class Redemption(Base):
   __tablename__ = "redemptions"
+  # Deleting history must not make a one-time reward redeemable again.
+  __table_args__ = (UniqueConstraint("reward_id", name=REDEMPTION_REWARD_UNIQUE_CONSTRAINT),)
 
   id: Mapped[int] = mapped_column(
     primary_key=True,

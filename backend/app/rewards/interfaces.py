@@ -15,6 +15,9 @@ class RewardServiceInterface(Protocol):
   def get_reward_by_id(self, reward_id: int, user_id: uuid.UUID) -> Reward:
     ...
 
+  def get_reward_by_id_for_update(self, reward_id: int, user_id: uuid.UUID) -> Reward:
+    ...
+
   def get_available_reward(self, reward_id: int, user_id: uuid.UUID) -> Reward:
     ...
 

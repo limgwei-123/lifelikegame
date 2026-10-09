@@ -28,6 +28,11 @@ class RewardRepository:
   def get_available_reward_by_id_and_user_id(self, reward_id, user_id):
     return self._query().filter(Reward.id == reward_id, Reward.user_id == user_id, Reward.status == RewardStatus.AVAILABLE).first()
 
+  def get_by_id_and_user_id_for_update(self, reward_id, user_id):
+    return (self._query()
+            .filter(Reward.id == reward_id, Reward.user_id == user_id)
+            .populate_existing().with_for_update().first())
+
   def update(self, reward: Reward):
 
     self.db.flush()

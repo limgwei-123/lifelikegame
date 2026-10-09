@@ -6,6 +6,9 @@ class UserServiceInterface(Protocol):
   def get_user_by_id(self, user_id: str) -> User | None:
     ...
 
+  def get_user_by_id_for_update(self, user_id: str) -> User | None:
+    ...
+
   def get_user_by_email(self, email: str) -> User | None:
     ...
 

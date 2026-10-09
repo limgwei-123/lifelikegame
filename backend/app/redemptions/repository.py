@@ -1,4 +1,6 @@
-from app.redemptions.models import Redemption
+from app.redemptions.models import Redemption, REDEMPTION_REWARD_UNIQUE_CONSTRAINT
+from app.errors.exception import ConflictError
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 class RedemptionRepository:
@@ -7,7 +9,13 @@ class RedemptionRepository:
 
   def create(self, redemption: Redemption):
     self.db.add(redemption)
-    self.db.flush()
+    try:
+      self.db.flush()
+    except IntegrityError as error:
+      constraint = getattr(getattr(error.orig, "diag", None), "constraint_name", None)
+      if constraint == REDEMPTION_REWARD_UNIQUE_CONSTRAINT:
+        raise ConflictError("Reward has already been redeemed") from error
+      raise
     self.db.refresh(redemption)
     return redemption
 
