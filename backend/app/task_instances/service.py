@@ -151,7 +151,7 @@ class TaskInstanceService:
       payload=point_ledger_request
     )
 
-    user = self.user_service.update_user_point(user_id=user_id, delta=delta)
+    user = self.user_service.get_user_by_id(user_id=user_id)
 
     return CompleteTaskInstanceResultDTO(
       task_instance=updated_instance,

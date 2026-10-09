@@ -15,7 +15,7 @@ class PointLedgerResponse(BaseModel):
     event_at: date
     delta: int
     entry_type: str
-    source_type: str
+    source_type: str | None
     source_id: int | None
     description: str | None
     created_at: datetime
@@ -24,3 +24,12 @@ class PointLedgerResponse(BaseModel):
 
 class PointsBalanceResponse(BaseModel):
     balance: int
+
+
+class PointsReconciliationResponse(BaseModel):
+    cached_balance: int | None
+    ledger_balance: int
+    difference: int | None
+    is_consistent: bool
+
+    model_config = ConfigDict(from_attributes=True)

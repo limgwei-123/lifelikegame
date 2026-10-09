@@ -40,8 +40,6 @@ class RedemptionWorkflowService:
       raise ConflictError("Not Enough Points")
 
 
-    updated_user = self.user_service.update_user_point(user_id=user_id, delta=(-reward.cost_points))
-
     updated_reward = self.reward_service.update_reward(reward_id=reward_id, user_id=user_id, data=UpdateRewardRequest(status=RewardStatus.REDEEMED))
 
     redemption = self.redemption_service.create_redemption(
@@ -62,7 +60,7 @@ class RedemptionWorkflowService:
       reward_id=reward.id,
       reward_title=reward.title,
       cost_points=reward.cost_points,
-      remaining_points=updated_user.current_value,
+      remaining_points=user.current_value,
       redeemed_at=redemption.created_at
     )
 
