@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     timezone: str = "Asia/Kuala_Lumpur"
     scheduler_enabled: bool = True
 
+    ai_provider: str = "gemini"
     ai_api_key: SecretStr | None = None
     ai_model: str | None = None
 

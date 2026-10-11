@@ -126,6 +126,7 @@ def test_http_endpoint_uses_provider_and_preserves_response(client, auth_headers
 
 
 def test_core_can_import_and_run_without_gemini_sdk():
+    from pathlib import Path
     import subprocess
     import sys
 
@@ -144,5 +145,52 @@ class Planner:
     def generate_plan(self, request):
         return PlannerResult(status="need_more_info", message="Independent")
 assert AIPlannerService(Planner()).generate_plan(AiPlannerChatRequest(user_prompt="Hi")).message == "Independent"
-'''], capture_output=True, text=True, timeout=30)
+'''], cwd=Path(__file__).resolve().parents[1], capture_output=True, text=True, timeout=30)
     assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.parametrize("configured_provider", [None, "gemini"])
+def test_factory_uses_gemini_with_legacy_or_explicit_environment(monkeypatch, configured_provider):
+    import json
+    from app.ai_planner import dependencies
+    from app.ai_planner.providers import gemini
+    from app.core.config import Settings
+
+    if configured_provider is None:
+        monkeypatch.delenv("AI_PROVIDER", raising=False)
+    else:
+        monkeypatch.setenv("AI_PROVIDER", configured_provider)
+    monkeypatch.setenv("AI_API_KEY", "configured-key")
+    monkeypatch.setenv("AI_MODEL", "configured-model")
+    settings = Settings(_env_file=None)
+    monkeypatch.setattr(dependencies, "get_settings", lambda: settings)
+    generate = Mock(return_value=SimpleNamespace(text=json.dumps({
+        "status": "need_more_info", "message": "Configured Gemini", "questions": ["When?"],
+    })))
+    client = Mock(return_value=SimpleNamespace(models=SimpleNamespace(generate_content=generate)))
+    monkeypatch.setattr(gemini.genai, "Client", client)
+
+    response = dependencies.build_ai_planner_service().generate_plan(AiPlannerChatRequest(user_prompt="Fitness"))
+
+    assert response.message == "Configured Gemini"
+    assert response.questions == ["When?"]
+    assert response.conversation_history[-1].role == "assistant"
+    assert client.call_args.kwargs["api_key"] == "configured-key"
+    assert generate.call_args.kwargs["model"] == "configured-model"
+
+
+@pytest.mark.parametrize("provider", ["unknown", "ollama", "", "GEMINI"])
+def test_factory_rejects_unsupported_provider_without_calling_gemini(monkeypatch, provider):
+    from app.ai_planner import dependencies
+    from app.ai_planner.providers import gemini
+    from app.core.config import Settings
+
+    monkeypatch.setenv("AI_PROVIDER", provider)
+    settings = Settings(_env_file=None, ai_api_key="configured-key", ai_model="configured-model")
+    monkeypatch.setattr(dependencies, "get_settings", lambda: settings)
+    client = Mock(side_effect=AssertionError("Unsupported providers must not call Gemini"))
+    monkeypatch.setattr(gemini.genai, "Client", client)
+
+    with pytest.raises(ValueError, match="AI_PROVIDER"):
+        dependencies.build_ai_planner_service().generate_plan(AiPlannerChatRequest(user_prompt="Fitness"))
+    client.assert_not_called()

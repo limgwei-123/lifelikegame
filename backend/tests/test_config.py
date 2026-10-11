@@ -37,6 +37,14 @@ def test_settings_uses_expected_defaults():
     assert settings.ai_model is None
 
 
+def test_settings_defaults_to_gemini_without_provider_environment(monkeypatch):
+    monkeypatch.delenv("AI_PROVIDER", raising=False)
+    settings = Settings(
+        database_url=VALID_DATABASE_URL, jwt_secret=VALID_JWT_SECRET, _env_file=None,
+    )
+    assert settings.ai_provider == "gemini"
+
+
 def test_settings_rejects_missing_required_values(monkeypatch):
     monkeypatch.delenv("DATABASE_URL", raising=False)
     monkeypatch.delenv("JWT_SECRET", raising=False)
@@ -97,6 +105,7 @@ def test_settings_reads_ai_configuration_from_environment(monkeypatch):
     monkeypatch.setenv("JWT_SECRET", VALID_JWT_SECRET)
     monkeypatch.setenv("AI_API_KEY", "test-ai-api-key")
     monkeypatch.setenv("AI_MODEL", "test-ai-model")
+    monkeypatch.setenv("AI_PROVIDER", "gemini")
 
     settings = Settings(_env_file=None)
 
@@ -106,3 +115,4 @@ def test_settings_reads_ai_configuration_from_environment(monkeypatch):
         == "test-ai-api-key"
     )
     assert settings.ai_model == "test-ai-model"
+    assert settings.ai_provider == "gemini"

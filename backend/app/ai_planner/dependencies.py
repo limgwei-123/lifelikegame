@@ -5,9 +5,12 @@ from app.core.config import get_settings
 
 
 def build_ai_planner_provider() -> AIPlannerProvider:
+    settings = get_settings()
+    if settings.ai_provider != "gemini":
+        raise ValueError("Unsupported AI_PROVIDER; supported provider: gemini")
+
     from app.ai_planner.providers.gemini import GeminiPlannerProvider
 
-    settings = get_settings()
     return GeminiPlannerProvider(
         api_key=settings.ai_api_key.get_secret_value() if settings.ai_api_key is not None else None,
         model=settings.ai_model,
