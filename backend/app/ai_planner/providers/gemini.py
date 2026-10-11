@@ -1,5 +1,5 @@
 import json
-from typing import NoReturn
+from typing import Callable, NoReturn
 
 from google import genai
 import httpx
@@ -18,9 +18,10 @@ def _reject_non_json_number(value: str) -> NoReturn:
 
 
 class GeminiPlannerProvider:
-    def __init__(self, *, api_key: str | None, model: str | None):
+    def __init__(self, *, api_key: str | None, model: str | None, before_send: Callable[[], None] | None = None):
         self.api_key = api_key
         self.model = model
+        self.before_send = before_send
 
     def generate_plan(self, request: PlannerRequest) -> PlannerResult:
         if not self.api_key or not self.model:
@@ -41,29 +42,31 @@ class GeminiPlannerProvider:
             ),
         )
         try:
-            # SDK owns all retries; parsing and validation are never retried.
-            response = client.models.generate_content(
-                model=self.model, contents=prompt, config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    response_json_schema=PlannerResult.model_json_schema(),
-                ),
+            config = types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_json_schema=PlannerResult.model_json_schema(),
             )
-        except httpx.TimeoutException as exc:
-            raise AITimeoutError() from exc
-        except httpx.TransportError as exc:
-            raise AIUnavailableError() from exc
-        except errors.APIError as exc:
-            if exc.code in (408, 504):
+            if self.before_send is not None:
+                self.before_send()
+            try:
+                # SDK owns all retries; admission runs once per logical request.
+                response = client.models.generate_content(model=self.model, contents=prompt, config=config)
+            except httpx.TimeoutException as exc:
                 raise AITimeoutError() from exc
-            if exc.code == 429:
-                raise AIRateLimitedError() from exc
-            if exc.code in (401, 403, 404):
-                raise AIConfigurationError() from exc
-            if exc.code in (500, 502, 503):
+            except httpx.TransportError as exc:
                 raise AIUnavailableError() from exc
-            raise AIProviderError() from exc
-        except ValueError as exc:
-            raise AIInvalidOutputError() from exc
+            except errors.APIError as exc:
+                if exc.code in (408, 504):
+                    raise AITimeoutError() from exc
+                if exc.code == 429:
+                    raise AIRateLimitedError() from exc
+                if exc.code in (401, 403, 404):
+                    raise AIConfigurationError() from exc
+                if exc.code in (500, 502, 503):
+                    raise AIUnavailableError() from exc
+                raise AIProviderError() from exc
+            except ValueError as exc:
+                raise AIInvalidOutputError() from exc
         finally:
             client.close()
         try:

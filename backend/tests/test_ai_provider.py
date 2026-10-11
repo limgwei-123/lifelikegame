@@ -107,11 +107,15 @@ def test_http_endpoint_uses_provider_and_preserves_response(client, auth_headers
     from app.ai_planner.providers.base import PlannerResult
 
     class Planner:
+        def __init__(self, before_send):
+            self.before_send = before_send
+
         def generate_plan(self, request):
+            self.before_send()
             assert request.user_prompt == "Fitness"
             return PlannerResult(status="need_more_info", message="When?", questions=["Which days?"])
 
-    monkeypatch.setattr(dependencies, "build_ai_planner_provider", lambda: Planner())
+    monkeypatch.setattr(dependencies, "build_ai_planner_provider", lambda **kwargs: Planner(**kwargs))
     response = client.post(
         "/ai-planner/generate-plan", headers=auth_headers, json={"user_prompt": "Fitness"},
     )
@@ -182,6 +186,7 @@ def test_factory_uses_gemini_with_legacy_or_explicit_environment(monkeypatch, co
 @pytest.mark.parametrize("provider", ["unknown", "ollama", "", "GEMINI"])
 def test_factory_rejects_unsupported_provider_without_calling_gemini(monkeypatch, provider):
     from app.ai_planner import dependencies
+    from app.ai_planner.errors import AIConfigurationError
     from app.ai_planner.providers import gemini
     from app.core.config import Settings
 
@@ -191,6 +196,6 @@ def test_factory_rejects_unsupported_provider_without_calling_gemini(monkeypatch
     client = Mock(side_effect=AssertionError("Unsupported providers must not call Gemini"))
     monkeypatch.setattr(gemini.genai, "Client", client)
 
-    with pytest.raises(ValueError, match="AI_PROVIDER"):
+    with pytest.raises(AIConfigurationError):
         dependencies.build_ai_planner_service().generate_plan(AiPlannerChatRequest(user_prompt="Fitness"))
     client.assert_not_called()

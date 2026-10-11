@@ -105,10 +105,14 @@ def test_ai_failure_uses_existing_http_error_contract(client, auth_headers, monk
     errors = {error.code: error for error in (AIInvalidOutputError, AIRateLimitedError, AITimeoutError)}
 
     class Provider:
+        def __init__(self, before_send):
+            self.before_send = before_send
+
         def generate_plan(self, request):
+            self.before_send()
             raise errors[code]()
 
-    monkeypatch.setattr(dependencies, "build_ai_planner_provider", lambda: Provider())
+    monkeypatch.setattr(dependencies, "build_ai_planner_provider", lambda **kwargs: Provider(**kwargs))
     response = client.post("/ai-planner/generate-plan", headers=auth_headers, json={"user_prompt": "Hi"})
     assert response.status_code == status
     assert response.json() == {"code": code, "message": errors[code].default_message, "details": {}}
