@@ -1,93 +1,26 @@
 from typing import Any
 
-from google import genai
-from google.genai import types
-
-from app.core.config import get_settings
-from app.ai_planner.extract_json import extract_json
-from app.ai_planner.prompts import build_generate_plan_prompt
+from app.ai_planner.providers.base import AIPlannerProvider, PlannerRequest
 from app.ai_planner.schemas import AiPlannerResponse, ConversationMessage
 from app.ai_planner.state import AiPlannerGraphState
 
-settings = get_settings()
-
-api_key = (
-    settings.ai_api_key.get_secret_value()
-    if settings.ai_api_key is not None
-    else None
-)
-model = settings.ai_model
-
-def call_ai(prompt: str) -> str:
-    if not api_key or not model:
-        raise RuntimeError(
-            "AI_API_KEY and AI_MODEL must be set "
-            "to use AI Planner"
-        )
-    client = genai.Client(api_key=api_key)
-
-    config = types.GenerateContentConfig(
-        # tools=[types.Tool(google_search=types.GoogleSearch())]
-    )
-
-    response = client.models.generate_content(
-        model=model,
-        contents=prompt,
-        config=config,
-    )
-
-    return response.text
-
-
-def generate_ai_response_node(state: AiPlannerGraphState) -> dict[str, Any]:
+def generate_ai_response_node(
+    state: AiPlannerGraphState, *, provider: AIPlannerProvider,
+) -> dict[str, Any]:
     payload = state["payload"]
 
-    prompt = build_generate_plan_prompt(
+    result = provider.generate_plan(PlannerRequest(
         user_prompt=payload.user_prompt,
         conversation_history=payload.conversation_history,
-    )
-
-    raw_result = call_ai(prompt)
-    data = extract_json(raw_result)
+    ))
+    data = result.model_dump()
 
     return {
-        "raw_result": raw_result,
         "data": data,
         "status": data.get("status"),
         "message": data.get("message", ""),
         "questions": data.get("questions", []),
         "plan": data.get("plan"),
-    }
-
-
-def normalize_schedule_node(state: AiPlannerGraphState) -> dict[str, Any]:
-    data = state["data"]
-    plan = data.get("plan")
-
-    if not plan:
-        return {
-            "data": data,
-            "plan": None,
-        }
-
-    for task in plan.get("tasks", []):
-        schedule_type = task.get("schedule_type")
-        schedule_value = task.get("schedule_value_json") or {}
-
-        if schedule_type == "daily":
-            task["schedule_value_json"] = {}
-
-        if schedule_type == "weekly":
-            days = schedule_value.get("days") if isinstance(schedule_value, dict) else None
-
-            if not days:
-                task["schedule_value_json"] = {"days": [1, 3, 5]}
-
-    data["plan"] = plan
-
-    return {
-        "data": data,
-        "plan": plan,
     }
 
 

@@ -1,18 +1,6 @@
 from pydantic import BaseModel
-from typing import Any, Literal
-
-class ConversationMessage(BaseModel):
-    role: Literal["user", "assistant"]
-    content: str
-class GeneratedTask(BaseModel):
-    title: str
-    description: str | None = None
-    schedule_type: Literal["daily", "weekly"]
-    schedule_value_json: dict[str, Any]
-
-class GeneratedPlan(BaseModel):
-    goal_title: str
-    tasks: list[GeneratedTask]
+from typing import Literal
+from app.ai_planner.providers.base import ConversationMessage, GeneratedPlan, GeneratedTask
 
 class AiPlannerResponse(BaseModel):
     status: Literal["need_more_info", "plan_ready"]

@@ -9,7 +9,6 @@ AiPlannerStatus = Literal["need_more_info", "plan_ready"]
 class AiPlannerGraphState(TypedDict, total=False):
     payload: AiPlannerChatRequest
 
-    raw_result: str
     data: dict[str, Any]
 
     status: AiPlannerStatus

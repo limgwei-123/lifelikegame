@@ -1,4 +1,9 @@
-def build_generate_plan_prompt(user_prompt: str, conversation_history: str | None = None) -> str:
+from app.ai_planner.providers.base import ConversationMessage
+
+
+def build_generate_plan_prompt(
+    user_prompt: str, conversation_history: list[ConversationMessage] | None = None,
+) -> str:
         return f"""
 You are an assistant for a gamified life management app.
 
