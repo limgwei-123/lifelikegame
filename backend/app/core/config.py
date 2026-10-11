@@ -21,6 +21,7 @@ class Settings(BaseSettings):
 
     ai_provider: str = "gemini"
     ai_daily_request_limit: int = Field(default=10, gt=0)
+    ai_price_profiles: str | None = None
     ai_api_key: SecretStr | None = None
     ai_model: str | None = None
 

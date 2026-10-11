@@ -8,3 +8,4 @@ from app.point_ledgers.models import PointLedger
 from app.rewards.models import Reward
 from app.redemptions.models import Redemption
 from app.ai_planner.usage_models import AIDailyUsage
+from app.ai_planner.usage_record_models import AIUsageRecord

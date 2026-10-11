@@ -107,7 +107,7 @@ def test_http_endpoint_uses_provider_and_preserves_response(client, auth_headers
     from app.ai_planner.providers.base import PlannerResult
 
     class Planner:
-        def __init__(self, before_send):
+        def __init__(self, before_send, observation=None):
             self.before_send = before_send
 
         def generate_plan(self, request):

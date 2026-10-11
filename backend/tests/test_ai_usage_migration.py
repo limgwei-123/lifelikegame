@@ -66,4 +66,7 @@ def test_migration_offline_sql_and_single_head():
     assert "ON DELETE CASCADE" in sql
     assert "DROP TABLE ai_daily_usage" in sql
     assert migration.down_revision == "6d2f8a1c4b70"
-    assert ScriptDirectory(str(BACKEND / "alembic")).get_heads() == [migration.revision]
+    scripts = ScriptDirectory(str(BACKEND / "alembic"))
+    heads = scripts.get_heads()
+    assert len(heads) == 1
+    assert migration.revision in {revision.revision for revision in scripts.walk_revisions(base="base", head=heads[0])}

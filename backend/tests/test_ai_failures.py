@@ -22,13 +22,15 @@ def sdk_transport(monkeypatch):
             raise outcome
         if isinstance(outcome, int):
             return httpx.Response(outcome, json={"error": {"code": outcome, "message": "SECRET vendor details"}})
+        if isinstance(outcome, dict):
+            return httpx.Response(200, json=outcome)
         return httpx.Response(200, json={"candidates": [{"content": {"parts": [{"text": outcome}]}}]})
 
     def build(**kwargs):
         options = kwargs["http_options"]
         assert options.timeout == 20000
         assert options.retry_options.attempts == 3
-        options.client_args = {"transport": httpx.MockTransport(handle)}
+        options.client_args = {**(options.client_args or {}), "transport": httpx.MockTransport(handle)}
         client = Client(**kwargs)
         # Exercise real SDK retry predicates/counts without waiting between attempts.
         client._api_client._retry.sleep = lambda seconds: None
@@ -105,7 +107,7 @@ def test_ai_failure_uses_existing_http_error_contract(client, auth_headers, monk
     errors = {error.code: error for error in (AIInvalidOutputError, AIRateLimitedError, AITimeoutError)}
 
     class Provider:
-        def __init__(self, before_send):
+        def __init__(self, before_send, observation=None):
             self.before_send = before_send
 
         def generate_plan(self, request):

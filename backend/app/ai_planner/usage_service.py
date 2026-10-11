@@ -2,8 +2,10 @@ from dataclasses import dataclass
 from contextlib import contextmanager
 from datetime import date, datetime, time, timedelta
 from hashlib import blake2b
+import logging
+import re
 from typing import Callable, Iterator
-from uuid import UUID
+from uuid import UUID, uuid4
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import Engine, text
@@ -19,6 +21,10 @@ from app.ai_planner.interfaces import AIPlannerServiceInterface
 from app.ai_planner.providers.base import AIPlannerProvider
 from app.ai_planner.schemas import AiPlannerChatRequest, AiPlannerResponse
 from app.ai_planner.service import AIPlannerService
+from app.ai_planner.observation import CallObservation, safe_log
+from app.ai_planner.usage_recorder import AIUsageRecorder
+from app.core.behaviors import get_request_id
+from app.errors.exception import AppError
 
 
 @dataclass(frozen=True)
@@ -112,12 +118,52 @@ class AIUsageAdmission:
 
 
 class UsageLimitedAIPlannerService(AIPlannerServiceInterface):
-    def __init__(self, user_id: UUID, admission: AIUsageAdmission, provider_factory: Callable[..., AIPlannerProvider]):
+    def __init__(self, user_id: UUID, admission: AIUsageAdmission, provider_factory: Callable[..., AIPlannerProvider],
+                 *, recorder: AIUsageRecorder | None = None, provider_name: str | None = None, model_name: str | None = None):
         self.user_id = user_id
         self.admission = admission
         self.provider_factory = provider_factory
+        self.recorder = recorder
+        self.provider_name = provider_name
+        self.model_name = model_name
 
     def generate_plan(self, payload: AiPlannerChatRequest) -> AiPlannerResponse:
-        with self.admission.admit(self.user_id) as before_send:
-            provider = self.provider_factory(before_send=before_send)
-            return AIPlannerService(provider).generate_plan(payload)
+        observation = None
+        record_id, request_id = None, None
+        if self.recorder is not None:
+            try:
+                record_id = uuid4()
+                request_id = get_request_id()
+                if not isinstance(request_id, str) or not 1 <= len(request_id) <= 128 or re.fullmatch(
+                    r"[A-Za-z0-9][A-Za-z0-9._:/-]*", request_id,
+                ) is None:
+                    request_id = str(uuid4())
+                observation = CallObservation()
+            except Exception:
+                safe_log(logging.getLogger("app.ai_usage"), "warning", "ai_observation_failed")
+        outcome, error_code = "error", "AI_INTERNAL_ERROR"
+        try:
+            with self.admission.admit(self.user_id) as before_send:
+                options = {"before_send": before_send}
+                if observation is not None:
+                    options["observation"] = observation
+                provider = self.provider_factory(**options)
+                result = AIPlannerService(provider).generate_plan(payload)
+            outcome, error_code = "success", None
+            return result
+        except AppError as exc:
+            error_code = exc.code
+            raise
+        finally:
+            # The guard is released before any best-effort telemetry work begins.
+            if observation is not None:
+                try:
+                    snapshot = observation.snapshot()
+                    if snapshot is not None:
+                        self.recorder.record(
+                            record_id=record_id, request_id=request_id, user_id=self.user_id,
+                            provider=self.provider_name, model=self.model_name, observation=snapshot,
+                            outcome=outcome, error_code=error_code,
+                        )
+                except Exception:
+                    safe_log(logging.getLogger("app.ai_usage"), "warning", "ai_usage_record_failed")

@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import logging
 from typing import Callable
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -6,6 +7,9 @@ from fastapi import Depends
 from sqlalchemy.orm import Session
 
 from app.ai_planner.errors import AIConfigurationError
+from app.ai_planner.observation import CallObservation, safe_log
+from app.ai_planner.pricing import load_price_profiles
+from app.ai_planner.usage_recorder import AIUsageRecorder
 from app.ai_planner.service import AIPlannerService
 from app.ai_planner.interfaces import AIPlannerServiceInterface
 from app.ai_planner.providers.base import AIPlannerProvider
@@ -16,7 +20,8 @@ from app.db import get_session
 from app.users.models import User
 
 
-def build_ai_planner_provider(*, before_send: Callable[[], None] | None = None) -> AIPlannerProvider:
+def build_ai_planner_provider(*, before_send: Callable[[], None] | None = None,
+                              observation: CallObservation | None = None) -> AIPlannerProvider:
     settings = get_settings()
     if settings.ai_provider != "gemini":
         raise AIConfigurationError()
@@ -27,6 +32,7 @@ def build_ai_planner_provider(*, before_send: Callable[[], None] | None = None) 
         api_key=settings.ai_api_key.get_secret_value() if settings.ai_api_key is not None else None,
         model=settings.ai_model,
         before_send=before_send,
+        observation=observation,
     )
 
 
@@ -52,4 +58,17 @@ def get_limited_ai_planner_service(
         policy,
         lambda: datetime.now(timezone.utc),
     )
-    return UsageLimitedAIPlannerService(current_user.id, admission, build_ai_planner_provider)
+    recorder = None
+    try:
+        try:
+            profiles = load_price_profiles(settings.ai_price_profiles)
+        except Exception:
+            profiles = {}
+            safe_log(logging.getLogger("app.ai_usage"), "warning", "ai_pricing_configuration_invalid")
+        recorder = AIUsageRecorder(db.get_bind().engine, profiles)
+    except Exception:
+        safe_log(logging.getLogger("app.ai_usage"), "warning", "ai_observation_failed")
+    return UsageLimitedAIPlannerService(
+        current_user.id, admission, build_ai_planner_provider,
+        recorder=recorder, provider_name=settings.ai_provider, model_name=settings.ai_model,
+    )

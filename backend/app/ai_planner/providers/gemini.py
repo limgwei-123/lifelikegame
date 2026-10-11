@@ -1,4 +1,5 @@
 import json
+import logging
 from typing import Callable, NoReturn
 
 from google import genai
@@ -11,6 +12,7 @@ from app.ai_planner.errors import (
 )
 from app.ai_planner.prompts import build_generate_plan_prompt
 from app.ai_planner.providers.base import PlannerRequest, PlannerResult
+from app.ai_planner.observation import CallObservation, TokenUsage, safe_log, safe_observe
 
 
 def _reject_non_json_number(value: str) -> NoReturn:
@@ -18,12 +20,37 @@ def _reject_non_json_number(value: str) -> NoReturn:
 
 
 class GeminiPlannerProvider:
-    def __init__(self, *, api_key: str | None, model: str | None, before_send: Callable[[], None] | None = None):
+    def __init__(self, *, api_key: str | None, model: str | None, before_send: Callable[[], None] | None = None,
+                 observation: CallObservation | None = None):
         self.api_key = api_key
         self.model = model
         self.before_send = before_send
+        self.observation = observation
 
     def generate_plan(self, request: PlannerRequest) -> PlannerResult:
+        try:
+            return self._generate_plan(request)
+        finally:
+            safe_observe(self.observation, "finish")
+
+    def _capture_usage(self, response: object) -> None:
+        if self.observation is None:
+            return
+        try:
+            metadata = getattr(response, "usage_metadata", None)
+            tokens = TokenUsage(
+                prompt_tokens=getattr(metadata, "prompt_token_count", None),
+                output_tokens=getattr(metadata, "candidates_token_count", None),
+                total_tokens=getattr(metadata, "total_token_count", None),
+                cached_input_tokens=getattr(metadata, "cached_content_token_count", None),
+                thinking_tokens=getattr(metadata, "thoughts_token_count", None),
+                tool_input_tokens=getattr(metadata, "tool_use_prompt_token_count", None),
+            )
+            safe_observe(self.observation, "capture_usage", tokens)
+        except Exception:
+            safe_log(logging.getLogger("app.ai_usage"), "warning", "ai_observation_failed")
+
+    def _generate_plan(self, request: PlannerRequest) -> PlannerResult:
         if not self.api_key or not self.model:
             raise AIConfigurationError()
 
@@ -39,6 +66,9 @@ class GeminiPlannerProvider:
                     attempts=3, initial_delay=1, max_delay=4, exp_base=2, jitter=1,
                     http_status_codes=[408, 429, 500, 502, 503, 504],
                 ),
+                client_args={"event_hooks": {"request": [
+                    lambda request: safe_observe(self.observation, "attempt"),
+                ]}} if self.observation is not None else None,
             ),
         )
         try:
@@ -48,6 +78,7 @@ class GeminiPlannerProvider:
             )
             if self.before_send is not None:
                 self.before_send()
+            safe_observe(self.observation, "begin_dispatch")
             try:
                 # SDK owns all retries; admission runs once per logical request.
                 response = client.models.generate_content(model=self.model, contents=prompt, config=config)
@@ -67,6 +98,7 @@ class GeminiPlannerProvider:
                 raise AIProviderError() from exc
             except ValueError as exc:
                 raise AIInvalidOutputError() from exc
+            self._capture_usage(response)
         finally:
             client.close()
         try:
