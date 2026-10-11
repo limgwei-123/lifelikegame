@@ -6,6 +6,7 @@ import pytest
 from google.genai import types
 
 from app.ai_planner.providers import gemini
+from app.ai_planner.errors import AIInvalidOutputError
 from app.ai_planner.providers.base import PlannerResult
 from app.ai_planner.schemas import AiPlannerChatRequest
 from app.ai_planner.service import AIPlannerService
@@ -24,7 +25,7 @@ FOLLOW_UP = {"status": "need_more_info", "message": "When?", "questions": ["Whic
 def generate_content(monkeypatch):
     generate = Mock()
     monkeypatch.setattr(gemini.genai, "Client", lambda **kwargs: SimpleNamespace(
-        models=SimpleNamespace(generate_content=generate),
+        models=SimpleNamespace(generate_content=generate), close=Mock(),
     ))
     return generate
 
@@ -99,7 +100,7 @@ def test_valid_structured_output_preserves_api_response_and_history(generate_con
     '{"status":"need_more_info","message":"Question"} trailing text',
 ])
 def test_malformed_or_non_object_json_is_rejected_without_repair(generate_content, raw):
-    with pytest.raises(ValueError):
+    with pytest.raises(AIInvalidOutputError):
         run_planner(generate_content, raw)
 
 
@@ -108,7 +109,7 @@ def test_non_json_numeric_constants_are_rejected(generate_content, number):
     payload = {**READY, "plan": {"goal_title": "Fitness", "tasks": [{
         "title": "Walk", "schedule_type": "weekly", "schedule_value_json": {"days": [number]},
     }]}}
-    with pytest.raises(ValueError):
+    with pytest.raises(AIInvalidOutputError):
         run_planner(generate_content, json.dumps(payload))
 
 
@@ -136,7 +137,7 @@ INVALID_RESULTS = [
 
 @pytest.mark.parametrize("payload", INVALID_RESULTS)
 def test_invalid_structured_result_is_rejected_before_response_mapping(generate_content, payload):
-    with pytest.raises(ValueError):
+    with pytest.raises(AIInvalidOutputError):
         run_planner(generate_content, json.dumps(payload))
 
 

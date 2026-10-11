@@ -2,8 +2,13 @@ import json
 from typing import NoReturn
 
 from google import genai
-from google.genai import types
+import httpx
+from google.genai import errors, types
 
+from app.ai_planner.errors import (
+    AIConfigurationError, AIInvalidOutputError, AIProviderError,
+    AIRateLimitedError, AITimeoutError, AIUnavailableError,
+)
 from app.ai_planner.prompts import build_generate_plan_prompt
 from app.ai_planner.providers.base import PlannerRequest, PlannerResult
 
@@ -19,24 +24,56 @@ class GeminiPlannerProvider:
 
     def generate_plan(self, request: PlannerRequest) -> PlannerResult:
         if not self.api_key or not self.model:
-            raise RuntimeError("AI_API_KEY and AI_MODEL must be set to use AI Planner")
+            raise AIConfigurationError()
 
         prompt = build_generate_plan_prompt(
             user_prompt=request.user_prompt,
             conversation_history=request.conversation_history,
         )
-        client = genai.Client(api_key=self.api_key)
-        response = client.models.generate_content(
-            model=self.model, contents=prompt, config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                response_json_schema=PlannerResult.model_json_schema(),
+        client = genai.Client(
+            api_key=self.api_key,
+            http_options=types.HttpOptions(
+                timeout=20000,
+                retry_options=types.HttpRetryOptions(
+                    attempts=3, initial_delay=1, max_delay=4, exp_base=2, jitter=1,
+                    http_status_codes=[408, 429, 500, 502, 503, 504],
+                ),
             ),
         )
-        raw = response.text
-        if not raw or not raw.strip():
-            raise ValueError("AI Planner returned an empty response")
-        data = json.loads(raw, parse_constant=_reject_non_json_number)
-        result = PlannerResult.model_validate(data, strict=True)
+        try:
+            # SDK owns all retries; parsing and validation are never retried.
+            response = client.models.generate_content(
+                model=self.model, contents=prompt, config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    response_json_schema=PlannerResult.model_json_schema(),
+                ),
+            )
+        except httpx.TimeoutException as exc:
+            raise AITimeoutError() from exc
+        except httpx.TransportError as exc:
+            raise AIUnavailableError() from exc
+        except errors.APIError as exc:
+            if exc.code in (408, 504):
+                raise AITimeoutError() from exc
+            if exc.code == 429:
+                raise AIRateLimitedError() from exc
+            if exc.code in (401, 403, 404):
+                raise AIConfigurationError() from exc
+            if exc.code in (500, 502, 503):
+                raise AIUnavailableError() from exc
+            raise AIProviderError() from exc
+        except ValueError as exc:
+            raise AIInvalidOutputError() from exc
+        finally:
+            client.close()
+        try:
+            raw = response.text
+            if not raw or not raw.strip():
+                raise ValueError("Empty response")
+            data = json.loads(raw, parse_constant=_reject_non_json_number)
+            result = PlannerResult.model_validate(data, strict=True)
+        except ValueError as exc:
+            raise AIInvalidOutputError() from exc
         # Keep existing defaults, but only after the output passes validation.
         if result.plan is not None:
             for task in result.plan.tasks:

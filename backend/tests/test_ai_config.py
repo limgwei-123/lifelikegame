@@ -3,6 +3,7 @@ from unittest.mock import Mock
 import pytest
 
 from app.ai_planner.providers import gemini
+from app.ai_planner.errors import AIConfigurationError
 from app.ai_planner.providers.base import PlannerRequest
 
 
@@ -14,10 +15,7 @@ def test_call_ai_rejects_missing_configuration_before_client_creation(
 
     monkeypatch.setattr(gemini.genai, "Client", client_mock)
 
-    with pytest.raises(
-        RuntimeError,
-        match="AI_API_KEY and AI_MODEL",
-    ):
+    with pytest.raises(AIConfigurationError):
         gemini.GeminiPlannerProvider(api_key=api_key, model=model).generate_plan(
             PlannerRequest(user_prompt="test prompt"),
         )

@@ -79,7 +79,7 @@ def test_gemini_adapter_preserves_prompt_and_schedule_defaults(monkeypatch, sche
         },
     })))
     monkeypatch.setattr(gemini.genai, "Client", lambda **kwargs: SimpleNamespace(
-        models=SimpleNamespace(generate_content=generate),
+        models=SimpleNamespace(generate_content=generate), close=Mock(),
     ))
     request = PlannerRequest(user_prompt="Fitness", conversation_history=[])
     result = gemini.GeminiPlannerProvider(api_key="test-key", model="test-model").generate_plan(request)
@@ -167,7 +167,7 @@ def test_factory_uses_gemini_with_legacy_or_explicit_environment(monkeypatch, co
     generate = Mock(return_value=SimpleNamespace(text=json.dumps({
         "status": "need_more_info", "message": "Configured Gemini", "questions": ["When?"],
     })))
-    client = Mock(return_value=SimpleNamespace(models=SimpleNamespace(generate_content=generate)))
+    client = Mock(return_value=SimpleNamespace(models=SimpleNamespace(generate_content=generate), close=Mock()))
     monkeypatch.setattr(gemini.genai, "Client", client)
 
     response = dependencies.build_ai_planner_service().generate_plan(AiPlannerChatRequest(user_prompt="Fitness"))
