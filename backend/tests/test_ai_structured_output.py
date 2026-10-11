@@ -60,6 +60,8 @@ def test_real_sdk_serializes_schema_into_http_request_without_network(monkeypatc
         schema = config["responseJsonSchema"]
         assert schema["properties"]["status"]["enum"] == ["need_more_info", "plan_ready"]
         assert schema["$defs"]["GeneratedPlan"]["properties"]["tasks"]["type"] == "array"
+        assert schema["$defs"]["GeneratedPlan"]["properties"]["tasks"]["minItems"] == 1
+        assert schema["$defs"]["GeneratedPlan"]["properties"]["tasks"]["maxItems"] == 3
         return httpx.Response(200, json={"candidates": [{
             "content": {"parts": [{"text": json.dumps(READY)}], "role": "model"},
             "finishReason": "STOP",
@@ -145,3 +147,23 @@ def test_invalid_structured_result_is_rejected_before_response_mapping(generate_
 def test_result_status_invariants_apply_to_any_provider(payload):
     with pytest.raises(ValueError):
         PlannerResult.model_validate(payload)
+
+
+@pytest.mark.parametrize("count", [0, 1, 2, 3, 4])
+def test_generated_task_count_is_enforced_without_silent_truncation(generate_content, count):
+    payload = {**READY, "plan": {"goal_title": "Fitness", "tasks": [
+        {**VALID_PLAN["tasks"][0], "title": f"Task {i}"} for i in range(count)
+    ]}}
+    if count in (0, 4):
+        with pytest.raises(AIInvalidOutputError):
+            run_planner(generate_content, json.dumps(payload))
+    else:
+        response = run_planner(generate_content, json.dumps(payload))
+        assert [task.title for task in response.plan.tasks] == [f"Task {i}" for i in range(count)]
+
+
+def test_any_provider_rejects_more_than_three_tasks():
+    with pytest.raises(ValueError):
+        PlannerResult.model_validate({**READY, "plan": {
+            "goal_title": "Fitness", "tasks": VALID_PLAN["tasks"] * 4,
+        }})

@@ -2,6 +2,8 @@ from typing import Any, Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+MAX_GENERATED_TASKS = 3
+
 
 class ConversationMessage(BaseModel):
     role: Literal["user", "assistant"]
@@ -17,7 +19,7 @@ class GeneratedTask(BaseModel):
 
 class GeneratedPlan(BaseModel):
     goal_title: str
-    tasks: list[GeneratedTask]
+    tasks: list[GeneratedTask] = Field(min_length=1, max_length=MAX_GENERATED_TASKS)
 
 
 class PlannerRequest(BaseModel):
