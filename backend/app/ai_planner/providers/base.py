@@ -1,6 +1,6 @@
 from typing import Any, Literal, Protocol
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class ConversationMessage(BaseModel):
@@ -26,10 +26,23 @@ class PlannerRequest(BaseModel):
 
 
 class PlannerResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     status: Literal["need_more_info", "plan_ready"]
     message: str
     questions: list[str] = Field(default_factory=list)
     plan: GeneratedPlan | None = None
+
+    @model_validator(mode="after")
+    def validate_status(self) -> "PlannerResult":
+        if self.status == "plan_ready":
+            if self.plan is None or not self.plan.tasks:
+                raise ValueError("plan_ready requires a plan with tasks")
+            if self.questions:
+                raise ValueError("plan_ready must not include questions")
+        elif self.plan is not None:
+            raise ValueError("need_more_info must not include a plan")
+        return self
 
 
 class AIPlannerProvider(Protocol):

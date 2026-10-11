@@ -1,9 +1,15 @@
+import json
+from typing import NoReturn
+
 from google import genai
 from google.genai import types
 
-from app.ai_planner.extract_json import extract_json
 from app.ai_planner.prompts import build_generate_plan_prompt
 from app.ai_planner.providers.base import PlannerRequest, PlannerResult
+
+
+def _reject_non_json_number(value: str) -> NoReturn:
+    raise ValueError(f"AI Planner output contains an invalid JSON number: {value}")
 
 
 class GeminiPlannerProvider:
@@ -21,18 +27,21 @@ class GeminiPlannerProvider:
         )
         client = genai.Client(api_key=self.api_key)
         response = client.models.generate_content(
-            model=self.model, contents=prompt, config=types.GenerateContentConfig(),
+            model=self.model, contents=prompt, config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_json_schema=PlannerResult.model_json_schema(),
+            ),
         )
-        data = extract_json(response.text)
-        # Preserve the existing Gemini schedule repair before typed validation.
-        plan = data.get("plan")
-        if data.get("status") == "plan_ready" and plan:
-            for task in plan.get("tasks", []):
-                schedule_value = task.get("schedule_value_json") or {}
-                if task.get("schedule_type") == "daily":
-                    task["schedule_value_json"] = {}
-                elif task.get("schedule_type") == "weekly":
-                    days = schedule_value.get("days") if isinstance(schedule_value, dict) else None
-                    if not days:
-                        task["schedule_value_json"] = {"days": [1, 3, 5]}
-        return PlannerResult.model_validate(data)
+        raw = response.text
+        if not raw or not raw.strip():
+            raise ValueError("AI Planner returned an empty response")
+        data = json.loads(raw, parse_constant=_reject_non_json_number)
+        result = PlannerResult.model_validate(data, strict=True)
+        # Keep existing defaults, but only after the output passes validation.
+        if result.plan is not None:
+            for task in result.plan.tasks:
+                if task.schedule_type == "daily":
+                    task.schedule_value_json = {}
+                elif not task.schedule_value_json.get("days"):
+                    task.schedule_value_json = {"days": [1, 3, 5]}
+        return result
