@@ -5,9 +5,9 @@ from app.workflows.task_workflow.dtos import (
     TaskWithScheduleResultDTO,
 )
 from app.workflows.task_workflow.schemas import (
-    ConfirmAiPlanRequest,
     GoalTaskSchduleResponse,
 )
+from app.ai_planner.draft_schemas import DraftPlan
 
 class TaskWorkflowServiceInterface(Protocol):
   def create_task_with_schedule(
@@ -18,5 +18,5 @@ class TaskWorkflowServiceInterface(Protocol):
   ) -> TaskWithScheduleResultDTO:
     ...
 
-  def create_from_ai_plan(self, user_id: uuid.UUID, payload: ConfirmAiPlanRequest) -> GoalTaskSchduleResponse:
+  def create_from_ai_plan(self, user_id: uuid.UUID, plan: DraftPlan) -> GoalTaskSchduleResponse:
     ...

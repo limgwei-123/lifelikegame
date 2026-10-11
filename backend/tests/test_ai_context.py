@@ -80,7 +80,7 @@ def test_manual_task_creation_is_not_limited_to_three(client, auth_headers, goal
 
 
 @pytest.mark.parametrize("count", [0, 4])
-def test_confirm_rejects_invalid_ai_task_count_before_writing_data(client, auth_headers, db, count):
+def test_legacy_plan_confirmation_is_rejected_before_writing_data(client, auth_headers, db, count):
     from app.goals.models import Goal
     from app.tasks.models import Task
 
@@ -93,6 +93,8 @@ def test_confirm_rejects_invalid_ai_task_count_before_writing_data(client, auth_
         ],
     }})
     assert response.status_code == 422, response.text
-    assert response.json()["detail"][0]["loc"] == ["body", "plan", "tasks"]
+    assert {tuple(error["loc"]) for error in response.json()["detail"]} == {
+        ("body", "draft_id"), ("body", "plan"),
+    }
     assert db.query(Goal).count() == goals_before
     assert db.query(Task).count() == tasks_before

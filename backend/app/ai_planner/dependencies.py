@@ -17,7 +17,23 @@ from app.core.config import get_settings
 from app.ai_planner.usage_service import AIUsageAdmission, AIUsagePolicy, UsageLimitedAIPlannerService
 from app.auth.dependencies import get_current_user
 from app.db import get_session
+from app.db import get_db
+from app.ai_planner.draft_repository import AIPlanDraftRepository
+from app.ai_planner.draft_service import AIPlanDraftService
+from app.scoring_schemes.dependencies import build_scoring_scheme_service
 from app.users.models import User
+
+
+def build_ai_draft_service(db: Session) -> AIPlanDraftService:
+    return AIPlanDraftService(AIPlanDraftRepository(db), build_scoring_scheme_service(db))
+
+
+def get_ai_draft_service(db: Session = Depends(get_db, scope="function")) -> AIPlanDraftService:
+    return build_ai_draft_service(db)
+
+
+def get_ai_draft_engine(db: Session = Depends(get_session)):
+    return db.get_bind().engine
 
 
 def build_ai_planner_provider(*, before_send: Callable[[], None] | None = None,

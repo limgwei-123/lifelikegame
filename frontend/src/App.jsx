@@ -29,6 +29,7 @@ import {
 import { getMe } from "./api/usersApi.js";
 import { confirmAiPlan, createTaskWithSchedule, redeemReward } from "./api/workflowsApi.js";
 import { AiPlannerPage } from "./pages/AiPlannerPage.jsx";
+import { refreshAfterAiConfirmation } from "./pages/aiDraftFlow.mjs";
 import { AuthPage } from "./pages/AuthPage.jsx";
 import { Dashboard } from "./pages/Dashboard.jsx";
 import { GoalsPage } from "./pages/GoalsPage.jsx";
@@ -355,9 +356,8 @@ export default function App() {
     setRewards(rewardList);
   };
 
-  const handleConfirmAiPlan = async (plan) => {
-    await confirmAiPlan(plan);
-    await loadProtectedData();
+  const handleAiPlanConfirmed = async () => {
+    await refreshAfterAiConfirmation(() => loadProtectedData({ requireSuccess: true }), setError);
     setActiveTab("dashboard");
   };
 
@@ -372,7 +372,7 @@ export default function App() {
   const currentPage = {
     dashboard: <Dashboard tasks={dashboardTasks} balance={balance} onComplete={completeTask} />,
     upcoming: <UpcomingPage goals={goals} taskSchedules={taskSchedules} tasks={tasks} />,
-    ai: <AiPlannerPage onConfirmPlan={handleConfirmAiPlan} scoringSchemes={scoringSchemes} />,
+    ai: <AiPlannerPage onConfirmPlan={confirmAiPlan} onPlanConfirmed={handleAiPlanConfirmed} scoringSchemes={scoringSchemes} />,
     goals: <GoalsPage goals={goals} onDelete={removeGoal} onSave={saveGoal} />,
     tasks: (
       <TasksPage

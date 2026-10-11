@@ -283,11 +283,13 @@ def test_deleted_public_default_is_rejected_without_partial_writes(
     if entrypoint == "workflow":
         path, payload = f"/workflows/goals/{ids_for(case)['goals']}/tasks", {"task": payload}
     elif entrypoint == "ai":
-        path, payload = "/workflows/ai/confirm", {"plan": {
+        from ai_draft_support import save_draft
+        draft_id = save_draft(db, case["owner"]["user"].id, {
             "goal_title": "Must roll back", "tasks": [{
                 "title": "Blocked default", "schedule_type": "daily", "schedule_value_json": {},
             }],
-        }}
+        })
+        path, payload = "/workflows/ai/confirm", {"draft_id": draft_id}
     elif entrypoint == "update":
         path = f"/tasks/{ids_for(case)['tasks']}"
         payload = {"scoring_scheme_id": scheme.id}

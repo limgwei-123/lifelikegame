@@ -1,4 +1,5 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
+from uuid import UUID
 from app.tasks.schemas import TaskResponse
 from app.task_schedules.schemas import TaskScheduleResponse
 from app.goals.schemas import GoalResponse
@@ -9,7 +10,6 @@ from pydantic import BaseModel
 
 from app.tasks.schemas import CreateTaskRequest, TaskResponse
 from app.task_schedules.schemas import CreateTaskScheduleRequest, TaskScheduleResponse
-from app.ai_planner.schemas import GeneratedPlan
 
 from app.task_instances.schemas import TaskInstanceResponse
 
@@ -24,7 +24,8 @@ class TaskWithScheduleResponse(BaseModel):
     task_instance: TaskInstanceResponse | None = None
 
 class ConfirmAiPlanRequest(BaseModel):
-    plan: GeneratedPlan
+    model_config = ConfigDict(extra="forbid")
+    draft_id: UUID
 
 class GoalTaskSchduleResponse(BaseModel):
     goal:GoalResponse

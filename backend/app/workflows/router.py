@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, status
 
 from app.auth.dependencies import get_current_user
+from app.ai_planner.dependencies import get_ai_draft_service
+from app.ai_planner.draft_service import AIPlanDraftService
 from app.core.mediator import Mediator
 from app.task_schedules.dtos import CreateTaskScheduleDTO
 from app.tasks.dtos import CreateTaskDTO
@@ -73,5 +75,7 @@ def confirm_ai_plan(
     payload: ConfirmAiPlanRequest,
     current_user=Depends(get_current_user),
     task_workflow_service: TaskWorkflowServiceInterface = Depends(get_task_workflow_service),
+    draft_service: AIPlanDraftService = Depends(get_ai_draft_service),
                     )->GoalTaskSchduleResponse:
-    return task_workflow_service.create_from_ai_plan(user_id=current_user.id, payload=payload)
+    return draft_service.confirm(user_id=current_user.id, draft_id=payload.draft_id,
+                                 task_workflow_service=task_workflow_service)

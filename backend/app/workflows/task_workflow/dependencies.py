@@ -26,7 +26,7 @@ def build_task_workflow_service(db: Session)-> TaskWorkflowServiceInterface:
   )
 
 def get_task_workflow_service(
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
 ) -> TaskWorkflowServiceInterface:
     return build_task_workflow_service(db)
 

@@ -1,3 +1,5 @@
+import { apiErrorMessage } from "./errorMessage.mjs";
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 const TOKEN_KEY = "lifelikegame_access_token";
 export const UNAUTHORIZED_EVENT = "lifelikegame:unauthorized";
@@ -46,7 +48,7 @@ export async function apiRequest(path, options = {}) {
   const data = contentType.includes("application/json") ? await response.json() : await response.text();
 
   if (!response.ok) {
-    const message = typeof data === "string" ? data : data.detail ?? "API request failed";
+    const message = apiErrorMessage(data);
     if (response.status === 401) {
       clearToken();
       if (typeof window !== "undefined") {

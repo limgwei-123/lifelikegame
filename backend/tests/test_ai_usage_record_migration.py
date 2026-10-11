@@ -80,4 +80,7 @@ def test_usage_record_migration_offline_sql_and_single_head():
     assert "ON DELETE CASCADE" in sql and "NUMERIC(24, 12)" in sql
     assert "CREATE INDEX ix_ai_usage_user_started" in sql
     assert migration.down_revision == "8a1d5c7e9b20"
-    assert ScriptDirectory(str(BACKEND / "alembic")).get_heads() == [migration.revision]
+    scripts = ScriptDirectory(str(BACKEND / "alembic"))
+    heads = scripts.get_heads()
+    assert len(heads) == 1
+    assert migration.revision in {r.revision for r in scripts.walk_revisions(base="base", head=heads[0])}

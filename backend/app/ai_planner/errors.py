@@ -1,6 +1,11 @@
 from datetime import datetime, timezone
 
-from app.errors.exception import AppError
+from app.errors.exception import AppError, ConflictError
+
+
+class AIDraftConsumedError(ConflictError):
+    code = "AI_DRAFT_CONSUMED"
+    default_message = "This AI draft has already been confirmed"
 
 
 class AITimeoutError(AppError):

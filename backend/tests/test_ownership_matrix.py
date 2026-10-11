@@ -325,19 +325,18 @@ def test_system_scheme_is_not_a_user_editable_resource(client, db, ownership_cas
 
 @pytest.mark.parametrize("actor", ["owner", "other", "anonymous"])
 def test_ai_confirmation_only_creates_for_authenticated_user(client, db, ownership_case, monkeypatch, actor):
+    from ai_draft_support import save_draft
     case = ownership_case
     scheme = ScoringScheme(title="AI system default", levels_json={"normal": 1}, user_id=None)
     db.add(scheme)
     db.commit()
     monkeypatch.setattr("app.shared.function.SCORING_SCHME_ID", SimpleNamespace(DEFAULT=scheme.id))
     before = snapshot(db, case)
-    response = client.post("/workflows/ai/confirm", headers=case[actor]["headers"], json={
-        "user_id": str(case["owner"]["user"].id),
-        "plan": {"goal_title": "AI ownership", "tasks": [{
+    draft_id = save_draft(db, case["owner" if actor == "anonymous" else actor]["user"].id,
+        {"goal_title": "AI ownership", "tasks": [{
             "title": "AI task", "schedule_type": "daily", "schedule_value_json": {},
-            "user_id": str(case["owner"]["user"].id),
-        }]},
-    })
+        }]})
+    response = client.post("/workflows/ai/confirm", headers=case[actor]["headers"], json={"draft_id": draft_id})
     assert response.status_code == (401 if actor == "anonymous" else 201), response.text
     if actor == "anonymous":
         assert snapshot(db, case) == before
@@ -353,16 +352,17 @@ def test_ai_confirmation_only_creates_for_authenticated_user(client, db, ownersh
 def test_ai_confirmation_rolls_back_goal_when_default_scheme_is_foreign(
     client, db, ownership_case, monkeypatch,
 ):
+    from ai_draft_support import save_draft
     case = ownership_case
     monkeypatch.setattr("app.shared.function.SCORING_SCHME_ID", SimpleNamespace(
         DEFAULT=ids_for(case, "other")["scoring_schemes"],
     ))
     before = snapshot(db, case)
-    response = client.post("/workflows/ai/confirm", headers=case["owner"]["headers"], json={
-        "plan": {"goal_title": "Must roll back", "tasks": [{
+    draft_id = save_draft(db, case["owner"]["user"].id,
+        {"goal_title": "Must roll back", "tasks": [{
             "title": "Forbidden default", "schedule_type": "daily", "schedule_value_json": {},
-        }]},
-    })
+        }]})
+    response = client.post("/workflows/ai/confirm", headers=case["owner"]["headers"], json={"draft_id": draft_id})
     assert response.status_code == 404, response.text
     assert snapshot(db, case) == before
 

@@ -7,7 +7,8 @@ from app.task_instances.interfaces import TaskInstanceServiceInterface
 from app.scoring_schemes.interfaces import ScoringSchemeServiceInterface
 
 from app.workflows.task_workflow.dtos import CreateTaskWithScheduleDTO, TaskWithScheduleResultDTO
-from app.workflows.task_workflow.schemas import TaskWithScheduleResponse,ConfirmAiPlanRequest,GoalTaskSchduleResponse
+from app.workflows.task_workflow.schemas import TaskWithScheduleResponse,GoalTaskSchduleResponse
+from app.ai_planner.draft_schemas import DraftPlan
 
 from app.shared.function import get_scoring_scheme_workflow, generate_task_instances_for_today
 from app.workflows.task_workflow.mappers import map_plan_to_goal_request,map_plan_to_task_with_schedule_requests
@@ -68,14 +69,14 @@ class TaskWorkflowService:
       task_instance=task_instance
     )
 
-  def create_from_ai_plan(self, user_id, payload:ConfirmAiPlanRequest)->GoalTaskSchduleResponse:
+  def create_from_ai_plan(self, user_id, plan:DraftPlan)->GoalTaskSchduleResponse:
 
 
-    goal_request = map_plan_to_goal_request(payload.plan)
+    goal_request = map_plan_to_goal_request(plan)
 
     goal = self.goal_service.create_goal(user_id=user_id, payload=goal_request)
 
-    task_with_schedule_requests = map_plan_to_task_with_schedule_requests(payload.plan)
+    task_with_schedule_requests = map_plan_to_task_with_schedule_requests(plan)
 
     task_with_schedule_list=[]
 

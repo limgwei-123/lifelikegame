@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from "react";
-import { generateAiPlan } from "../api/aiPlannerApi.js";
+import React, { useMemo, useRef, useState } from "react";
+import { generateAiPlan, saveAiDraftRevision } from "../api/aiPlannerApi.js";
+import { createAiDraftFlow } from "./aiDraftFlow.mjs";
 import { CreateSheet } from "../components/CreateSheet.jsx";
 import { Field } from "../components/Field.jsx";
 import { PageHeader } from "../components/PageHeader.jsx";
@@ -31,7 +32,13 @@ function normalizePlan(plan, defaultScoringSchemeId = "") {
   };
 }
 
-export function AiPlannerPage({ onConfirmPlan, scoringSchemes = [] }) {
+export function AiPlannerPage({ onConfirmPlan, onPlanConfirmed, scoringSchemes = [] }) {
+  const confirmRef = useRef(onConfirmPlan);
+  confirmRef.current = onConfirmPlan;
+  const [draftFlow] = useState(() => createAiDraftFlow({
+    saveRevision: saveAiDraftRevision,
+    confirmDraft: (draftId) => confirmRef.current(draftId)
+  }));
   const [prompt, setPrompt] = useState("");
   const [conversationHistory, setConversationHistory] = useState([]);
   const [messages, setMessages] = useState([]);
@@ -48,7 +55,7 @@ export function AiPlannerPage({ onConfirmPlan, scoringSchemes = [] }) {
   const submitPrompt = async (event) => {
     event.preventDefault();
     const userPrompt = prompt.trim();
-    if (!userPrompt || submitting) return;
+    if (!userPrompt || submitting || saving) return;
 
     setSubmitting(true);
     setError("");
@@ -73,6 +80,7 @@ export function AiPlannerPage({ onConfirmPlan, scoringSchemes = [] }) {
       ]);
 
       if (response.status === "plan_ready" && response.plan) {
+        draftFlow.setDraft({ draft_id: response.draft_id, plan: response.plan });
         const nextPlan = normalizePlan(response.plan, defaultScoringSchemeId);
         setReadyPlan(nextPlan);
         setEditablePlan(nextPlan);
@@ -132,6 +140,7 @@ export function AiPlannerPage({ onConfirmPlan, scoringSchemes = [] }) {
   };
 
   const addTask = () => {
+    if (saving || planTaskCount >= 3) return;
     setEditablePlan((current) => ({
       ...current,
       tasks: [
@@ -155,15 +164,15 @@ export function AiPlannerPage({ onConfirmPlan, scoringSchemes = [] }) {
   };
 
   const confirmPlan = async () => {
-    if (!editablePlan || saving) return;
+    if (!editablePlan || saving || submitting) return;
 
     const nextPlan = normalizePlan(editablePlan, defaultScoringSchemeId);
     if (!nextPlan.goal_title.trim()) {
       setError("Goal title is required.");
       return;
     }
-    if (nextPlan.tasks.length === 0) {
-      setError("At least one task is required.");
+    if (nextPlan.tasks.length === 0 || nextPlan.tasks.length > 3) {
+      setError("A plan must contain one to three tasks.");
       return;
     }
     if (nextPlan.tasks.some((task) => !task.title.trim())) {
@@ -178,7 +187,7 @@ export function AiPlannerPage({ onConfirmPlan, scoringSchemes = [] }) {
     setSaving(true);
     setError("");
     try {
-      await onConfirmPlan({
+      draftFlow.markEdited({
         ...nextPlan,
         goal_title: nextPlan.goal_title.trim(),
         tasks: nextPlan.tasks.map((task) => ({
@@ -188,11 +197,13 @@ export function AiPlannerPage({ onConfirmPlan, scoringSchemes = [] }) {
           scoring_scheme_id: task.scoring_scheme_id ? Number(task.scoring_scheme_id) : null
         }))
       });
+      await draftFlow.confirm();
       setConfirmOpen(false);
       setReadyPlan(null);
       setEditablePlan(null);
       setMessages([]);
       setConversationHistory([]);
+      await onPlanConfirmed?.();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -221,7 +232,7 @@ export function AiPlannerPage({ onConfirmPlan, scoringSchemes = [] }) {
             ) : null}
           </div>
 
-          {error ? <p className="empty-text">{error}</p> : null}
+          {error && !confirmOpen ? <p className="empty-text" role="alert">{error}</p> : null}
 
           <div className="ai-chat-log" aria-live="polite">
             {messages.length === 0 ? (
@@ -255,7 +266,7 @@ export function AiPlannerPage({ onConfirmPlan, scoringSchemes = [] }) {
                 value={prompt}
               />
             </Field>
-            <button className="primary-button" disabled={submitting} type="submit">
+            <button className="primary-button" disabled={submitting || saving} type="submit">
               {submitting ? "Planning..." : "Send"}
             </button>
           </form>
@@ -271,9 +282,11 @@ export function AiPlannerPage({ onConfirmPlan, scoringSchemes = [] }) {
         }}
       >
         <div className="plan-preview">
+          {error ? <p className="empty-text" role="alert">{error}</p> : null}
           <div className="form-grid">
             <Field label="Goal title">
               <input
+                disabled={saving}
                 onChange={(event) => updateGoalTitle(event.target.value)}
                 placeholder="Build consistent fitness"
                 value={editablePlan?.goal_title ?? ""}
@@ -303,12 +316,14 @@ export function AiPlannerPage({ onConfirmPlan, scoringSchemes = [] }) {
                 <div className="form-grid two-column">
                   <Field label="Task title">
                     <input
+                      disabled={saving}
                       onChange={(event) => updateTask(index, { title: event.target.value })}
                       value={task.title}
                     />
                   </Field>
                   <Field label="Schedule">
                     <select
+                      disabled={saving}
                       onChange={(event) => updateTaskScheduleType(index, event.target.value)}
                       value={task.schedule_type}
                     >
@@ -318,6 +333,7 @@ export function AiPlannerPage({ onConfirmPlan, scoringSchemes = [] }) {
                   </Field>
                   <Field label="Scoring scheme">
                     <select
+                      disabled={saving}
                       onChange={(event) => updateTask(index, { scoring_scheme_id: event.target.value })}
                       value={task.scoring_scheme_id ?? ""}
                     >
@@ -332,6 +348,7 @@ export function AiPlannerPage({ onConfirmPlan, scoringSchemes = [] }) {
                   </Field>
                   <Field label="Description">
                     <textarea
+                      disabled={saving}
                       onChange={(event) => updateTask(index, { description: event.target.value })}
                       rows="3"
                       value={task.description ?? ""}
@@ -343,6 +360,7 @@ export function AiPlannerPage({ onConfirmPlan, scoringSchemes = [] }) {
                       {days.map((day, dayIndex) => (
                         <label key={day}>
                           <input
+                            disabled={saving}
                             checked={task.schedule_value_json?.days?.includes(dayIndex) ?? false}
                             onChange={() => toggleWeeklyDay(index, dayIndex)}
                             type="checkbox"
@@ -359,7 +377,7 @@ export function AiPlannerPage({ onConfirmPlan, scoringSchemes = [] }) {
             ))}
           </div>
 
-          <button className="secondary-button" disabled={saving} onClick={addTask} type="button">
+          <button className="secondary-button" disabled={saving || planTaskCount >= 3} onClick={addTask} type="button">
             Add task
           </button>
 
@@ -367,7 +385,7 @@ export function AiPlannerPage({ onConfirmPlan, scoringSchemes = [] }) {
             <button className="secondary-button" disabled={saving} onClick={() => setConfirmOpen(false)} type="button">
               Cancel
             </button>
-            <button className="primary-button" disabled={saving} onClick={confirmPlan} type="button">
+            <button className="primary-button" disabled={saving || submitting} onClick={confirmPlan} type="button">
               {saving ? "Saving..." : "Confirm"}
             </button>
           </div>

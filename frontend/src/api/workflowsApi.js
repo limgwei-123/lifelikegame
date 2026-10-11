@@ -13,9 +13,9 @@ export function redeemReward(rewardId) {
   });
 }
 
-export function confirmAiPlan(plan) {
+export function confirmAiPlan(draftId) {
   return apiRequest("/workflows/ai/confirm", {
     method: "POST",
-    body: { plan }
+    body: { draft_id: draftId }
   });
 }

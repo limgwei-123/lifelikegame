@@ -42,6 +42,7 @@ def test_ready_plan_is_mapped_to_existing_response_and_history():
 
     response = AIPlannerService(Planner()).generate_plan(AiPlannerChatRequest(user_prompt="Fitness"))
     assert response.model_dump(exclude={"conversation_history"}) == {
+        "draft_id": None,
         "status": "plan_ready", "message": "Ready", "questions": [], "plan": {
             "goal_title": "Fitness", "tasks": [{
                 "title": "Walk", "description": None,
@@ -121,6 +122,7 @@ def test_http_endpoint_uses_provider_and_preserves_response(client, auth_headers
     )
     assert response.status_code == 200, response.text
     assert response.json() == {
+        "draft_id": None,
         "status": "need_more_info", "message": "When?", "questions": ["Which days?"],
         "plan": None, "conversation_history": [
             {"role": "user", "content": "Fitness"},

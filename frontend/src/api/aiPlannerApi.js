@@ -6,3 +6,10 @@ export function generateAiPlan(payload) {
     body: payload
   });
 }
+
+export function saveAiDraftRevision(draftId, plan) {
+  return apiRequest(`/ai-planner/drafts/${encodeURIComponent(draftId)}/revisions`, {
+    method: "POST",
+    body: plan
+  });
+}
