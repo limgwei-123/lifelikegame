@@ -1,15 +1,12 @@
 from fastapi import APIRouter, Depends, status
 
 from app.auth.dependencies import get_current_user
-from app.ai_planner.dependencies import get_ai_draft_service
-from app.ai_planner.draft_service import AIPlanDraftService
 from app.core.mediator import Mediator
 from app.task_schedules.dtos import CreateTaskScheduleDTO
 from app.tasks.dtos import CreateTaskDTO
-from app.workflows.task_workflow.commands import CreateTaskWithScheduleCommand
-from app.workflows.task_workflow.dependencies import get_create_task_with_schedule_mediator, get_task_workflow_service
+from app.workflows.task_workflow.commands import ConfirmAiPlanCommand, CreateTaskWithScheduleCommand
+from app.workflows.task_workflow.dependencies import get_confirm_ai_plan_mediator, get_create_task_with_schedule_mediator
 from app.workflows.task_workflow.dtos import CreateTaskWithScheduleDTO
-from app.workflows.task_workflow.interfaces import TaskWorkflowServiceInterface
 
 from app.workflows.redemption_workflow.commands import RedeemRewardCommand
 from app.workflows.redemption_workflow.dependencies import get_redeem_reward_mediator
@@ -74,8 +71,9 @@ def redemption_workflow(
 def confirm_ai_plan(
     payload: ConfirmAiPlanRequest,
     current_user=Depends(get_current_user),
-    task_workflow_service: TaskWorkflowServiceInterface = Depends(get_task_workflow_service),
-    draft_service: AIPlanDraftService = Depends(get_ai_draft_service),
+    mediator: Mediator = Depends(get_confirm_ai_plan_mediator),
                     )->GoalTaskSchduleResponse:
-    return draft_service.confirm(user_id=current_user.id, draft_id=payload.draft_id,
-                                 task_workflow_service=task_workflow_service)
+    return mediator.send(ConfirmAiPlanCommand(
+        user_id=current_user.id,
+        draft_id=payload.draft_id,
+    ))

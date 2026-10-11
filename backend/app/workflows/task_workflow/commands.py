@@ -10,3 +10,9 @@ class CreateTaskWithScheduleCommand(TransactionalCommand):
   goal_id: int
   user_id: uuid.UUID
   payload: CreateTaskWithScheduleDTO
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class ConfirmAiPlanCommand(TransactionalCommand):
+  user_id: uuid.UUID
+  draft_id: uuid.UUID

@@ -1,6 +1,8 @@
+import uuid
+
 from app.core.behaviors import ValidationIssue
 from app.shared.enums import ScheduleType
-from app.workflows.task_workflow.commands import CreateTaskWithScheduleCommand
+from app.workflows.task_workflow.commands import ConfirmAiPlanCommand, CreateTaskWithScheduleCommand
 
 
 class CreateTaskWithScheduleCommandValidator:
@@ -46,4 +48,15 @@ class CreateTaskWithScheduleCommandValidator:
         code="date_range",
       ))
 
+    return issues
+
+
+class ConfirmAiPlanCommandValidator:
+  def validate(self, command: ConfirmAiPlanCommand) -> list[ValidationIssue]:
+    issues = []
+    for field, label in (("user_id", "User ID"), ("draft_id", "Draft ID")):
+      if not isinstance(getattr(command, field), uuid.UUID):
+        issues.append(ValidationIssue(
+          field=field, message=f"{label} must be a UUID", code="uuid",
+        ))
     return issues

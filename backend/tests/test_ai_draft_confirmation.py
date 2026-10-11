@@ -127,8 +127,8 @@ def test_corrupted_persisted_plan_is_rejected_without_domain_writes(client, db, 
 
 
 def test_concurrent_confirmation_creates_one_plan(db, ai_user_ids):
-    from app.ai_planner.dependencies import build_ai_draft_service
-    from app.workflows.task_workflow.dependencies import build_task_workflow_service
+    from app.workflows.task_workflow.commands import ConfirmAiPlanCommand
+    from app.workflows.task_workflow.dependencies import build_confirm_ai_plan_mediator
     user_id = ai_user_ids[0]
     scheme = ScoringScheme(title="Concurrent", levels_json={"normal": 1}, user_id=user_id)
     db.add(scheme)
@@ -139,9 +139,9 @@ def test_concurrent_confirmation_creates_one_plan(db, ai_user_ids):
         with Session(db.get_bind()) as session:
             barrier.wait(timeout=10)
             try:
-                with build_unit_of_work(session).begin():
-                    build_ai_draft_service(session).confirm(user_id=user_id, draft_id=draft_id,
-                        task_workflow_service=build_task_workflow_service(session))
+                build_confirm_ai_plan_mediator(session).send(ConfirmAiPlanCommand(
+                    user_id=user_id, draft_id=draft_id,
+                ))
                 return "created"
             except AppError as error:
                 return error.code
@@ -154,7 +154,8 @@ def test_concurrent_confirmation_creates_one_plan(db, ai_user_ids):
 
 def test_revision_waits_for_confirmation_and_rejects_consumed_source(db, ai_user_ids):
     from app.ai_planner.dependencies import build_ai_draft_service
-    from app.workflows.task_workflow.dependencies import build_task_workflow_service
+    from app.workflows.task_workflow.commands import ConfirmAiPlanCommand
+    from app.workflows.task_workflow.dependencies import build_confirm_ai_plan_mediator
     user_id = ai_user_ids[0]
     scheme = ScoringScheme(title="Race", levels_json={"normal": 1}, user_id=user_id)
     db.add(scheme)
@@ -174,7 +175,7 @@ def test_revision_waits_for_confirmation_and_rejects_consumed_source(db, ai_user
                 return error.code
     # The first transaction holds the row lock until its successful commit.
     with ThreadPoolExecutor(max_workers=1) as pool:
-        with Session(db.get_bind()) as session, build_unit_of_work(session).begin():
+        with Session(db.get_bind()) as session:
             service = build_ai_draft_service(session)
             service.require_available(user_id=user_id, draft_id=draft_id, for_update=True)
             future = pool.submit(revise)
@@ -183,8 +184,9 @@ def test_revision_waits_for_confirmation_and_rejects_consumed_source(db, ai_user
             while not session.scalar(text("SELECT cardinality(pg_blocking_pids(:pid)) > 0"), {"pid": worker_pids[0]}):
                 assert monotonic() < deadline, "Revision did not wait on the held draft row lock"
                 sleep(0.01)
-            service.confirm(user_id=user_id, draft_id=draft_id,
-                task_workflow_service=build_task_workflow_service(session))
+            build_confirm_ai_plan_mediator(session).send(ConfirmAiPlanCommand(
+                user_id=user_id, draft_id=draft_id,
+            ))
         assert future.result(timeout=10) == "AI_DRAFT_CONSUMED"
 
 
