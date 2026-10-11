@@ -12,6 +12,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 from app.main import app
 from app.db import Base, get_db, get_session
 from app.core.unit_of_work import build_unit_of_work
+from ownership_support import ownership_case
 
 
 TEST_DATABASE_URL = os.getenv(
