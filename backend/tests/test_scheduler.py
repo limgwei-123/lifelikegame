@@ -1,8 +1,12 @@
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime
 import logging
+from threading import Barrier
 from unittest.mock import Mock
 
 import pytest
+from sqlalchemy import text
+from sqlalchemy.orm import Session
 
 from app import scheduler as scheduler_module
 from app.task_instances.commands import GenerateDailyTaskInstancesCommand
@@ -10,6 +14,7 @@ from app.task_instances.dependencies import build_generate_task_instances_mediat
 from app.task_instances.dtos import GenerateTaskInstancesResultDTO
 from app.task_instances.handlers import GenerateDailyTaskInstancesCommandHandler
 from app.core.behaviors import get_request_id
+from app.errors.exception import ConflictError
 from app.task_instances.models import TaskInstance
 from app.task_instances.repository import TaskInstanceRepository
 from app.task_schedules.repository import TaskScheduleRepository
@@ -113,6 +118,64 @@ def test_generation_summary_counts_only_new_rows(db, task_schedule):
     assert second.created_count == 0
     assert second.processed_count == first.processed_count
     assert len(second.task_instances) == len(first.task_instances)
+
+
+def test_concurrent_generation_rolls_back_conflict_and_retries_without_duplicates(db, task_schedule, monkeypatch):
+    bind = db.get_bind()
+    task_id = task_schedule["task_id"]
+    target_date = date(2049, 6, 10)
+    command = GenerateDailyTaskInstancesCommand(target_date=target_date)
+    build_generate_task_instances_mediator(db).send(command)
+    # Keep other test schedules satisfied; race only the selected task's missing row.
+    assert db.query(TaskInstance).filter(
+        TaskInstance.task_id == task_id, TaskInstance.date_instance == target_date,
+    ).delete(synchronize_session=False) == 1
+    db.commit()
+    existing_ids = {row.id for row in db.query(TaskInstance).filter(TaskInstance.date_instance == target_date)}
+    db.rollback()
+    ready_to_insert = Barrier(2)
+    original_lookup = TaskInstanceRepository.get_by_task_id_and_date_instance
+
+    def synchronize_missing_lookup(repo, task_id, date_instance):
+        instance = original_lookup(repo, task_id, date_instance)
+        if task_id == task_schedule["task_id"] and date_instance == target_date and instance is None:
+            ready_to_insert.wait(timeout=10)
+        return instance
+
+    monkeypatch.setattr(TaskInstanceRepository, "get_by_task_id_and_date_instance", synchronize_missing_lookup)
+
+    def generate():
+        with Session(bind) as session:
+            session.execute(text("SET LOCAL lock_timeout = '15s'"))
+            session.execute(text("SET LOCAL statement_timeout = '20s'"))
+            mediator = build_generate_task_instances_mediator(session)
+            try:
+                result = mediator.send(command)
+                outcome = ("created", result.created_count)
+            except ConflictError as error:
+                assert error.code == "CONFLICT"
+                outcome = ("conflict", 0)
+            assert not session.in_transaction()
+            assert session.is_active
+            assert mediator.send(command).created_count == 0
+            return outcome
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        futures = [pool.submit(generate) for _ in range(2)]
+        outcomes = [future.result(timeout=25) for future in futures]
+    assert sorted(outcomes) == [("conflict", 0), ("created", 1)]
+    with Session(bind) as reader:
+        rows = reader.query(TaskInstance).filter(TaskInstance.date_instance == target_date).all()
+        created = [row for row in rows if row.id not in existing_ids]
+        assert len(created) == 1
+        assert {row.id for row in rows} == existing_ids | {created[0].id}
+        instance = created[0]
+        assert instance.task_id == task_id
+        assert instance.task_schedule_id == task_schedule["id"]
+        assert str(instance.user_id) == str(task_schedule["user_id"])
+        assert instance.status == "todo"
+        assert instance.score_awarded == 0
+        assert instance.scoring_snapshot_json == {"normal": 1, "good": 2, "perfect": 3}
 
 
 def test_inactive_task_stays_manageable_and_generation_resumes_without_duplicates(
