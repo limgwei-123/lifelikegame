@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime,date
 from typing import TYPE_CHECKING
-from sqlalchemy import ForeignKey, DateTime, Date, String, Integer, JSON, Index, text
+from sqlalchemy import CheckConstraint, ForeignKey, DateTime, Date, String, Integer, JSON, Index, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db import Base
 from app.shared.enums import TaskInstanceStatus
@@ -15,6 +15,7 @@ ACTIVE_TASK_INSTANCE_UNIQUE_INDEX = "uq_task_instances_active_task_date"
 class TaskInstance(Base):
   __tablename__ = "task_instances"
   __table_args__ = (
+    CheckConstraint("status IN ('todo', 'done', 'skipped')", name="ck_task_instances_status"),
     Index(
       ACTIVE_TASK_INSTANCE_UNIQUE_INDEX,
       "task_id",

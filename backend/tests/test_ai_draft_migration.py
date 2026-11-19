@@ -68,4 +68,7 @@ def test_draft_migration_offline_and_linear_head():
     assert "CREATE TABLE ai_plan_drafts" in output.getvalue()
     assert "DROP TABLE ai_plan_drafts" in output.getvalue()
     assert migration.down_revision == "b2c7e4a9d610"
-    assert ScriptDirectory(str(BACKEND / "alembic")).get_heads() == [migration.revision]
+    scripts = ScriptDirectory(str(BACKEND / "alembic"))
+    heads = scripts.get_heads()
+    assert len(heads) == 1
+    assert migration.revision in {r.revision for r in scripts.walk_revisions(base="base", head=heads[0])}

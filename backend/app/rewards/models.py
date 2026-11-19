@@ -1,7 +1,7 @@
 import uuid
 from datetime import date
 from typing import TYPE_CHECKING
-from sqlalchemy import ForeignKey, DateTime, Integer, String, Text, Date
+from sqlalchemy import CheckConstraint, ForeignKey, DateTime, Integer, String, Text, Date
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime
 from app.shared.enums import RewardStatus
@@ -13,6 +13,10 @@ if TYPE_CHECKING:
 
 class Reward(Base):
   __tablename__ = "rewards"
+  __table_args__ = (
+    CheckConstraint("cost_points >= 0", name="ck_rewards_cost_points_nonnegative"),
+    CheckConstraint("status IN ('available', 'redeemed')", name="ck_rewards_status"),
+  )
 
   id: Mapped[int] = mapped_column(
     primary_key=True,
@@ -38,7 +42,7 @@ class Reward(Base):
 
   status: Mapped[str] = mapped_column(
     String(20),
-    nullable=True,
+    nullable=False,
     default=RewardStatus.AVAILABLE.value,
     server_default=RewardStatus.AVAILABLE.value,
   )
