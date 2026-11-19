@@ -12,20 +12,25 @@ from ai_usage_support import ai_user_ids
 from app.ai_planner.draft_models import AIPlanDraft
 from app.ai_planner.draft_repository import AIPlanDraftRepository
 from app.ai_planner.draft_schemas import DraftPlan
-from app.core.unit_of_work import build_unit_of_work
+from app.core.unit_of_work import UnitOfWork, build_unit_of_work
 from app.errors.exception import AppError
 from app.goals.models import Goal
 from app.tasks.models import Task
+from app.tasks.repository import TaskRepository
 from app.task_schedules.models import TaskSchedule
+from app.task_schedules.repository import TaskScheduleRepository
 from app.task_instances.models import TaskInstance
+from app.task_instances.repository import TaskInstanceRepository
 from app.scoring_schemes.models import ScoringScheme
 from test_ai_usage_service import authenticate
 
 
-def make_draft(db, user_id, scheme_id=None):
+def make_draft(db, user_id, scheme_id=None, *, task_count=1):
     draft = AIPlanDraftRepository(db).create(user_id=user_id, plan=DraftPlan.model_validate({
-        "goal_title": "Saved fitness", "tasks": [{"title": "Saved walk", "schedule_type": "daily",
-            "schedule_value_json": {}, "scoring_scheme_id": scheme_id}],
+        "goal_title": "Saved fitness", "tasks": [{
+            "title": "Saved walk" if task_count == 1 else f"Saved walk {index + 1}",
+            "schedule_type": "daily", "schedule_value_json": {}, "scoring_scheme_id": scheme_id,
+        } for index in range(task_count)],
     }))
     draft_id = draft.id
     db.commit()
@@ -104,6 +109,114 @@ def test_confirmation_failure_rolls_back_records_and_draft_then_retry_succeeds(c
     assert db.get(AIPlanDraft, draft_id).consumed_at is None
     result = client.post("/workflows/ai/confirm", headers=headers, json={"draft_id": str(draft_id)})
     assert result.status_code == 201, result.text
+
+
+def plan_snapshot(bind, user_id):
+    with Session(bind) as reader:
+        return {
+            model.__tablename__: [dict(row) for row in reader.execute(
+                select(model.__table__).where(model.user_id == user_id).order_by(model.id),
+            ).mappings()]
+            for model in [Goal, Task, TaskSchedule, TaskInstance, AIPlanDraft]
+        }
+
+
+@pytest.mark.parametrize("entrypoint", ["api", "command"])
+@pytest.mark.parametrize("repository,method,fail_on,inflight_counts", [
+    pytest.param(TaskRepository, "create", 2, [2, 3, 2, 2], id="second-task"),
+    pytest.param(TaskRepository, "create", 3, [2, 4, 3, 3], id="third-task"),
+    pytest.param(TaskScheduleRepository, "create", 2, [2, 3, 3, 2], id="second-schedule"),
+    pytest.param(TaskScheduleRepository, "create", 3, [2, 4, 4, 3], id="third-schedule"),
+    pytest.param(TaskInstanceRepository, "create", 2, [2, 3, 3, 3], id="second-instance"),
+    pytest.param(TaskInstanceRepository, "create", 3, [2, 4, 4, 4], id="third-instance"),
+    pytest.param(AIPlanDraftRepository, "consume", 1, [2, 4, 4, 4], id="draft-consumption"),
+    pytest.param(UnitOfWork, "commit", 1, [2, 4, 4, 4], id="final-commit"),
+])
+def test_multi_task_plan_failure_preserves_existing_rows_and_allows_retry(
+    client, db, confirmation_case, monkeypatch, entrypoint, repository, method, fail_on, inflight_counts,
+):
+    from app.workflows.task_workflow.commands import ConfirmAiPlanCommand
+    from app.workflows.task_workflow.dependencies import build_confirm_ai_plan_mediator
+
+    headers, user_id, existing_draft_id, scheme_id = confirmation_case
+    existing = client.post("/workflows/ai/confirm", headers=headers,
+                           json={"draft_id": str(existing_draft_id)})
+    assert existing.status_code == 201, existing.text
+    draft_id = make_draft(db, user_id, scheme_id, task_count=3)
+    db.rollback()
+    bind = db.get_bind()
+    before = plan_snapshot(bind, user_id)
+    original = getattr(repository, method)
+    writes = 0
+
+    def submit():
+        if entrypoint == "command":
+            return build_confirm_ai_plan_mediator(db).send(ConfirmAiPlanCommand(
+                user_id=user_id, draft_id=draft_id,
+            ))
+        response = client.post("/workflows/ai/confirm", headers=headers, json={"draft_id": str(draft_id)})
+        assert response.status_code == 201, response.text
+        return response.json()
+
+    def fail_after_write(self, *args, **kwargs):
+        nonlocal writes
+        # Write real rows first; final commit must fail before it becomes durable.
+        result = None if repository is UnitOfWork else original(self, *args, **kwargs)
+        writes += 1
+        if writes == fail_on:
+            session = self.session if repository is UnitOfWork else self.db
+            assert counts(session, user_id) == inflight_counts
+            if repository in (AIPlanDraftRepository, UnitOfWork):
+                assert session.get(AIPlanDraft, draft_id).consumed_at is not None
+            raise RuntimeError("injected multi-task plan failure")
+        return result
+
+    with monkeypatch.context() as patch:
+        patch.setattr(repository, method, fail_after_write)
+        with pytest.raises(RuntimeError, match="injected multi-task plan failure"):
+            submit()
+    assert writes == fail_on
+    assert not db.in_transaction()
+    assert db.is_active
+    assert plan_snapshot(bind, user_id) == before
+
+    submit()
+    after = plan_snapshot(bind, user_id)
+    assert [len(after[model.__tablename__]) for model in [Goal, Task, TaskSchedule, TaskInstance]] == [2, 4, 4, 4]
+    created = {}
+    for model in [Goal, Task, TaskSchedule, TaskInstance]:
+        table = model.__tablename__
+        previous_ids = {row["id"] for row in before[table]}
+        assert [row for row in after[table] if row["id"] in previous_ids] == before[table]
+        created[model] = [row for row in after[table] if row["id"] not in previous_ids]
+
+    goal = created[Goal][0]
+    assert goal["title"] == "Saved fitness"
+    assert {row["title"] for row in created[Task]} == {"Saved walk 1", "Saved walk 2", "Saved walk 3"}
+    assert all(row["goal_id"] == goal["id"] for row in created[Task])
+    task_ids = {row["id"] for row in created[Task]}
+    schedules = {row["id"]: row["task_id"] for row in created[TaskSchedule]}
+    assert set(schedules.values()) == task_ids
+    assert {row["task_id"] for row in created[TaskInstance]} == task_ids
+    assert all(schedules[row["task_schedule_id"]] == row["task_id"] for row in created[TaskInstance])
+
+    old_drafts = {row["id"]: row for row in before[AIPlanDraft.__tablename__]}
+    new_drafts = {row["id"]: row for row in after[AIPlanDraft.__tablename__]}
+    assert new_drafts.keys() == old_drafts.keys()
+    assert new_drafts[existing_draft_id] == old_drafts[existing_draft_id]
+    confirmed = new_drafts[draft_id]
+    assert confirmed["consumed_at"] is not None
+    assert {**confirmed, "consumed_at": None} == old_drafts[draft_id]
+
+    if entrypoint == "command":
+        with pytest.raises(AppError) as error:
+            submit()
+        assert error.value.code == "AI_DRAFT_CONSUMED"
+    else:
+        repeated = client.post("/workflows/ai/confirm", headers=headers, json={"draft_id": str(draft_id)})
+        assert repeated.status_code == 409, repeated.text
+        assert repeated.json()["code"] == "AI_DRAFT_CONSUMED"
+    assert plan_snapshot(bind, user_id) == after
 
 
 def test_deleted_scoring_scheme_is_rechecked_at_confirm(client, db, confirmation_case):
