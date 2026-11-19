@@ -1,6 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timezone
 from threading import Barrier
+from time import monotonic, sleep
 from uuid import uuid4
 
 import pytest
@@ -17,6 +18,8 @@ from app.point_ledgers.repository import PointLedgerRepository
 from app.point_ledgers.schemas import CreatePointLedgerRequest
 from app.rewards.models import Reward
 from app.task_instances.models import TaskInstance
+from app.task_instances.commands import CompleteTaskInstanceCommand
+from app.task_instances.dependencies import build_complete_task_instance_mediator
 from app.task_schedules.models import TaskSchedule
 from app.tasks.models import Task
 from app.shared.enums import ScheduleType
@@ -156,6 +159,71 @@ def test_completion_balance_failure_rolls_back_instance_and_ledger(
         instance = reader.get(TaskInstance, points_task)
         assert instance.status == "todo"
         assert instance.score_awarded == 0
+
+
+@pytest.mark.parametrize("initial_level,level,expected_balance,expected_deltas", [
+    (None, "normal", 10, [10]),
+    (None, "perfect", 25, [25]),
+    ("normal", "perfect", 25, [10, 15]),
+])
+def test_concurrent_completion_awards_each_score_change_once(
+    db, points_user, points_task, initial_level, level, expected_balance, expected_deltas,
+):
+    user_id = points_user["user_id"]
+    bind = db.get_bind()
+    if initial_level is not None:
+        with Session(bind) as session:
+            build_complete_task_instance_mediator(session).send(CompleteTaskInstanceCommand(
+                task_instance_id=points_task, user_id=user_id, completion_level=initial_level,
+            ))
+
+    ready = Barrier(3)
+    worker_pids = []
+
+    def complete():
+        with Session(bind) as session:
+            session.execute(text("SET LOCAL lock_timeout = '15s'"))
+            session.execute(text("SET LOCAL statement_timeout = '20s'"))
+            worker_pids.append(session.scalar(text("SELECT pg_backend_pid()")))
+            ready.wait(timeout=10)
+            result = build_complete_task_instance_mediator(session).send(CompleteTaskInstanceCommand(
+                task_instance_id=points_task, user_id=user_id, completion_level=level,
+            ))
+            return result.point_ledger is not None
+
+    with Session(bind) as locker:
+        locker.get(TaskInstance, points_task, with_for_update=True)
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            futures = [pool.submit(complete) for _ in range(2)]
+            try:
+                ready.wait(timeout=10)
+                # Prove both requests reach database contention before releasing the row.
+                deadline = monotonic() + 5
+                while not all(locker.scalar(
+                    text("SELECT cardinality(pg_blocking_pids(:pid)) > 0"), {"pid": pid},
+                ) for pid in worker_pids):
+                    assert monotonic() < deadline, "Completion requests did not both wait on database locks"
+                    sleep(0.01)
+            finally:
+                locker.rollback()
+            awarded = [future.result(timeout=25) for future in futures]
+
+    assert sorted(awarded) == [False, True]
+    assert _state(db, user_id) == (expected_balance, expected_deltas)
+    with Session(bind) as reader:
+        instance = reader.get(TaskInstance, points_task)
+        assert instance.status == "done"
+        assert instance.completion_level == level
+        assert instance.score_awarded == expected_balance
+        ledgers = reader.query(PointLedger).filter(PointLedger.user_id == user_id).all()
+        assert all(row.source_type == "task_instance" and row.source_id == points_task for row in ledgers)
+
+    with Session(bind) as session:
+        repeated = build_complete_task_instance_mediator(session).send(CompleteTaskInstanceCommand(
+            task_instance_id=points_task, user_id=user_id, completion_level=level,
+        ))
+        assert repeated.point_ledger is None
+    assert _state(db, user_id) == (expected_balance, expected_deltas)
 
 
 def test_redemption_spends_ledger_funding_without_a_second_balance_debit(client, db, points_user):
