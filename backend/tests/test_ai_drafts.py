@@ -193,6 +193,72 @@ def test_revision_task_limit_rejects_before_writing(client, db, count):
     assert db.query(AIPlanDraft).filter_by(user_id=user_id).count() == before
 
 
+@pytest.mark.parametrize("change", [
+    {"title": " "}, {"scoring_scheme_json": {"normal": 999}},
+    {"scoring_scheme_id": True},
+    {"schedule_type": "monthly", "schedule_value_json": {"day": 1}},
+    {"schedule_type": "weekly", "schedule_value_json": {"days": [True]}},
+    {"schedule_type": "weekly", "schedule_value_json": {"days": ["1"]}},
+    {"schedule_type": "weekly", "schedule_value_json": {"days": [7]}},
+    {"schedule_type": "weekly", "schedule_value_json": {"days": []}},
+    {"schedule_value_json": {"days": [1]}},
+])
+def test_invalid_draft_edits_are_rejected_by_http_without_changing_source(client, db, change):
+    from ai_draft_support import save_draft
+    headers, user_id = authenticate(client)
+    draft_id = UUID(save_draft(db, user_id, PLAN))
+    with Session(db.get_bind()) as reader:
+        original_plan = deepcopy(reader.get(AIPlanDraft, draft_id).plan_json)
+    edited = {**PLAN, "tasks": [{**PLAN["tasks"][0], **change}]}
+    response = client.post(f"/ai-planner/drafts/{draft_id}/revisions", headers=headers, json=edited)
+    assert response.status_code == 422, response.text
+    with Session(db.get_bind()) as reader:
+        drafts = reader.scalars(select(AIPlanDraft).where(AIPlanDraft.user_id == user_id)).all()
+        assert len(drafts) == 1
+        assert drafts[0].id == draft_id
+        assert drafts[0].plan_json == original_plan
+        assert drafts[0].consumed_at is None
+
+
+def test_three_task_revision_with_weekly_schedule_can_be_confirmed(client, db):
+    from ai_draft_support import save_draft
+    from app.scoring_schemes.models import ScoringScheme
+    from app.task_schedules.models import TaskSchedule
+    from app.tasks.models import Task
+
+    headers, user_id = authenticate(client)
+    scheme = ScoringScheme(title="Weekly draft scoring", levels_json={"normal": 2}, user_id=user_id)
+    db.add(scheme)
+    db.flush()
+    scheme_id = scheme.id
+    source_id = UUID(save_draft(db, user_id, PLAN))
+    with Session(db.get_bind()) as reader:
+        original_plan = deepcopy(reader.get(AIPlanDraft, source_id).plan_json)
+    plan = {"goal_title": "Three tasks", "tasks": [
+        {**PLAN["tasks"][0], "title": f"Task {i}", "scoring_scheme_id": scheme_id} for i in range(3)
+    ]}
+    plan["tasks"][2].update(schedule_type="weekly", schedule_value_json={"days": [6, 0, 6]})
+    response = client.post(f"/ai-planner/drafts/{source_id}/revisions", headers=headers, json=plan)
+    assert response.status_code == 201, response.text
+    revised_id = UUID(response.json()["draft_id"])
+    assert revised_id != source_id
+    assert response.json()["plan"]["tasks"][2]["schedule_value_json"] == {"days": [0, 6]}
+    confirmed = client.post("/workflows/ai/confirm", headers=headers, json={"draft_id": str(revised_id)})
+    assert confirmed.status_code == 201, confirmed.text
+    with Session(db.get_bind()) as reader:
+        tasks = reader.scalars(select(Task).where(Task.user_id == user_id)).all()
+        assert {row.title for row in tasks} == {"Task 0", "Task 1", "Task 2"}
+        assert all(row.scoring_scheme_id == scheme_id and row.scoring_scheme_json == {"normal": 2} for row in tasks)
+        schedules = reader.scalars(select(TaskSchedule).where(TaskSchedule.user_id == user_id)).all()
+        assert len(schedules) == 3
+        assert {row.task_id for row in schedules} == {row.id for row in tasks}
+        weekly = next(row for row in schedules if row.schedule_type == "weekly")
+        assert weekly.schedule_value_json == {"days": [0, 6]}
+        assert reader.get(AIPlanDraft, source_id).plan_json == original_plan
+        assert reader.get(AIPlanDraft, source_id).consumed_at is None
+        assert reader.get(AIPlanDraft, revised_id).consumed_at is not None
+
+
 def test_generation_commit_failure_never_returns_a_draft(client, db, sdk_transport, monkeypatch):
     from fastapi.testclient import TestClient
     from app.main import app

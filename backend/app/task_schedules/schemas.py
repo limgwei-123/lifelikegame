@@ -1,7 +1,7 @@
 from pydantic import BaseModel, ConfigDict, Field
 from datetime import date,datetime
 import uuid
-from typing import Any, List
+from typing import Annotated, Any
 from app.task_schedules.models import ScheduleType
 
 
@@ -15,7 +15,7 @@ days={
   6: "Sunday"
 }
 class WeeklyValue(BaseModel):
-    days: List[int]
+    days: list[Annotated[int, Field(strict=True, ge=0, le=6)]] = Field(min_length=1)
 
 class MonthlyValue(BaseModel):
     day: int = Field(strict=True, ge=1, le=31)

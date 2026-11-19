@@ -17,6 +17,8 @@ class TaskScheduleService:
   def create_task_schedule(self, task_id, user_id, payload: CreateTaskScheduleDTO):
     task = self.task_service.get_task_by_id(task_id=task_id, user_id=user_id)
 
+    self._validate_date_range(payload.start_date, payload.end_date)
+
     self._validate_schedule_value(
     schedule_type=payload.schedule_type,
     schedule_value_json=payload.schedule_value_json,
@@ -54,13 +56,17 @@ class TaskScheduleService:
 
   def update_task_schedule(self, task_schedule_id, user_id, data: UpdateTaskScheduleRequest):
     task_schedule = self.get_task_schedule_by_id(task_schedule_id=task_schedule_id, user_id=user_id)
+    update_task_schedule = data.model_dump(exclude_unset=True)
+
+    self._validate_date_range(
+      update_task_schedule.get("start_date", task_schedule.start_date),
+      update_task_schedule.get("end_date", task_schedule.end_date),
+    )
 
     self._validate_schedule_value(
     schedule_type=data.schedule_type,
     schedule_value_json=data.schedule_value_json,
     )
-
-    update_task_schedule = data.model_dump(exclude_unset=True)
 
     for field, value in update_task_schedule.items():
         setattr(task_schedule, field, value)
@@ -76,15 +82,14 @@ class TaskScheduleService:
 
   def _validate_schedule_value(self, schedule_type, schedule_value_json):
     if schedule_type == ScheduleType.WEEKLY:
-      validated = WeeklyValue(**schedule_value_json)
-      days = validated.days
-
-      if len(days) == 0:
-        raise ValueError("days cannot be empty")
-
-      for day in days:
-        if day < 0 or day > 6:
-          raise ValueError("each day must be between 0 and 6")
+      try:
+        WeeklyValue(**schedule_value_json)
+      except ValidationError as error:
+        raise RequestValidationError([{
+          "field": "schedule_value_json.days",
+          "message": "Weekly days must be a non-empty list of integers between 0 and 6",
+          "code": "weekly_days",
+        }]) from error
 
     elif schedule_type == ScheduleType.MONTHLY:
       try:
@@ -95,3 +100,11 @@ class TaskScheduleService:
           "message": "Monthly day must be an integer between 1 and 31",
           "code": "monthly_day",
         }]) from error
+
+  def _validate_date_range(self, start_date, end_date):
+    if start_date is not None and end_date is not None and end_date < start_date:
+      raise RequestValidationError([{
+        "field": "schedule.end_date",
+        "message": "End date must not be before start date",
+        "code": "date_range",
+      }])
