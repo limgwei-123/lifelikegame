@@ -1,4 +1,7 @@
 .env
+.env.production
+.production.env
+.lifelikegame-release.lock/
 
 .venv
 

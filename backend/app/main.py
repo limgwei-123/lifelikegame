@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.config import get_settings
 from app.core.rate_limiting import RequestRateLimiter
@@ -29,17 +31,9 @@ frontend_url = settings.frontend_url
 
 register_exception_handlers(app)
 
-origins = [
-    "http://localhost:5173",
-    "http://localhost:3000",
-]
-
-if frontend_url:
-    origins.append(frontend_url)
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -57,5 +51,8 @@ def health():
 
 @app.get("/db-health")
 def db_health():
-  db_ping()
+  try:
+    db_ping()
+  except SQLAlchemyError:
+    return JSONResponse(status_code=503, content={"db": "unavailable"})
   return {"db": "ok"}

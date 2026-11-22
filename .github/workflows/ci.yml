@@ -51,3 +51,28 @@ jobs:
       - name: Run tests
         run: pytest -v
 
+  image:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build production image
+        run: docker build --label "org.opencontainers.image.revision=$GITHUB_SHA" --tag "lifelikegame-backend:$GITHUB_SHA" ./backend
+      - name: Verify disposable production deployment
+        run: python backend/scripts/smoke_release.py --image "lifelikegame-backend:$GITHUB_SHA"
+      - name: Export passing main image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: docker save --output backend-image.tar "lifelikegame-backend:$GITHUB_SHA"
+      - uses: actions/upload-artifact@v7
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          name: backend-image-${{ github.sha }}
+          path: backend-image.tar
+          retention-days: 7
+          if-no-files-found: error
+

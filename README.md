@@ -153,6 +153,11 @@ When the backend starts, APScheduler is also started. It generates task instance
 
 ## Database Migrations
 
+The default Compose file is for local development and overrides the image's
+production startup command. Apply development migrations explicitly with
+`docker compose exec api alembic upgrade head` when you choose to upgrade that
+database. Production uses the separate procedure below.
+
 Run Alembic migrations from the backend directory:
 
 ```bash
@@ -161,6 +166,88 @@ alembic upgrade head
 ```
 
 Alembic reads `DATABASE_URL` from the root `.env` file.
+
+## Production Deployment (Single Host)
+
+Use `docker-compose.production.yml` by itself, not merged with the development
+file. It runs one API container/worker with one scheduler, uses a separate
+production database volume, publishes no database port, and binds the API to
+`127.0.0.1:8000`. There is no reload or source-code mount. The image runs as a
+non-root user and excludes tests, scripts, local secrets and virtualenv files.
+The current lock still includes test libraries; test source files are excluded.
+
+Before exposing the service, configure an HTTPS reverse proxy on the host and
+forward to `127.0.0.1:8000`. Set `FORWARDED_ALLOW_IPS` to the actual proxy source
+address observed by the API container, which may be a Docker gateway rather
+than `127.0.0.1`. Restrict direct access, replace forwarded headers at that
+trusted proxy, and never trust `*`. TLS, DNS, firewall and hosting configuration
+are external prerequisites, not configured by this repository. Keep one API
+worker/replica and stop the old API before starting a new version; do not use
+rolling overlap. Revisit scheduler and rate-limit design before scaling.
+
+The supported release path is a successful `main` push of the **exact commit**:
+CI tests first, then builds and smoke-tests the production image against a
+disposable PostgreSQL container. Only then does it publish the downloadable
+`backend-image-<commit SHA>` artifact (7-day retention, current image platform
+is Linux/AMD64). Failed CI produces no releasable artifact. This gate protects
+the release helper; repository administrators can still bypass branch rules or
+run Docker manually. Require the CI checks in repository settings to also block
+merges; those account settings must be configured separately.
+
+On the server, install Python 3, Docker Compose and GitHub CLI (`gh`), authenticate
+`gh` with repository/Actions read access, and check out the same commit with a
+clean worktree. Copy `.env.production.example` to ignored `.env.production` and
+fill it in. Generate separate random database/JWT secrets, for example with
+`python -c "import secrets; print(secrets.token_hex(32))"`. Keep the DB password
+in `POSTGRES_PASSWORD` and `DATABASE_URL` identical; URL-encode it if it contains
+reserved URL characters. Production requires at least 32 characters for
+`JWT_SECRET` and a single HTTPS `FRONTEND_URL`. Only that browser origin is
+allowed by CORS. AI calls additionally require valid `AI_API_KEY` and `AI_MODEL`.
+
+After separately approving migration of the production database, run:
+
+```bash
+python backend/scripts/release.py RUN_ID --env-file .env.production --apply-migrations
+```
+
+`RUN_ID` is the successful CI run's number shown in its GitHub URL, not a commit
+SHA. The helper verifies its repository, workflow, branch, conclusion and commit,
+downloads the CI artifact, verifies the image revision, preflights configuration,
+then stops the old API and waits for the replacement to become ready. It holds
+a local `.lifelikegame-release.lock` directory to prevent concurrent releases;
+after a host/process crash, check no release is running before removing a stale
+empty lock. It does not deploy automatically after a push and never rebuilds
+from unverified working files. Do not change DB credentials on an existing
+PostgreSQL volume without a separate credential-rotation procedure.
+Deployment values come from the explicitly selected env file; inherited shell
+values with those names are removed before Compose runs. Keep this file
+self-contained rather than referring to unrelated shell variables.
+
+The image entry point is `python -m app.deployment`: validate production config,
+run `alembic upgrade head`, then start exactly one Uvicorn worker. A migration
+failure exits without serving traffic. Existing invalid records are reported by
+the migration and require a separate data-handling decision; there is no automatic
+repair, deletion or downgrade. Do not run another migration command concurrently.
+The API restart policy is deliberately disabled: after a host/container failure,
+use the verified release command again, or start the same approved image after
+checking the cause. This avoids an unattended migration retry loop.
+
+`GET /health` is liveness; `GET /db-health` returns 200 when PostgreSQL responds,
+otherwise a safe 503. Production logs retain event identifiers, request context
+and exception types while omitting SQL values, arbitrary dependency messages,
+request/access logs and tracebacks. Detailed debugging should use controlled
+local reproduction instead of enabling sensitive production trace output.
+
+To reproduce the image acceptance checks locally without touching an existing DB:
+
+```bash
+docker build -t lifelikegame-backend:check ./backend
+python backend/scripts/smoke_release.py --image lifelikegame-backend:check
+```
+
+The smoke script creates randomly named containers/network, verifies migration,
+authenticated task/reward flows and DB outage/recovery, checks migration refusal
+on invalid test history, then removes only its own temporary resources.
 
 ## Local Development
 

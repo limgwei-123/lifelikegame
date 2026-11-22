@@ -1,0 +1,51 @@
+# Standalone file: do not merge with the development Compose file.
+name: lifelikegame-production
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: lifelikegame
+      POSTGRES_USER: lifelikegame
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set a random production database password}
+    volumes:
+      - production_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lifelikegame -d lifelikegame"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  api:
+    image: ${BACKEND_IMAGE:?Load the successful CI release image first}
+    environment:
+      APP_ENV: production
+      DATABASE_URL: ${DATABASE_URL:?Set the production DB URL using host db and encoded credentials}
+      JWT_SECRET: ${JWT_SECRET:?Set a random secret of at least 32 characters}
+      FRONTEND_URL: ${FRONTEND_URL:?Set the HTTPS browser origin}
+      TIMEZONE: ${TIMEZONE:-Asia/Kuala_Lumpur}
+      SCHEDULER_ENABLED: "true"
+      PORT: "8000"
+      FORWARDED_ALLOW_IPS: ${FORWARDED_ALLOW_IPS:-127.0.0.1}
+      AI_API_KEY: ${AI_API_KEY:-}
+      AI_MODEL: ${AI_MODEL:-}
+      AI_DAILY_REQUEST_LIMIT: ${AI_DAILY_REQUEST_LIMIT:-10}
+      AI_REQUESTS_PER_MINUTE: ${AI_REQUESTS_PER_MINUTE:-3}
+      LOGIN_REQUESTS_PER_MINUTE: ${LOGIN_REQUESTS_PER_MINUTE:-10}
+      SIGNUP_REQUESTS_PER_HOUR: ${SIGNUP_REQUESTS_PER_HOUR:-10}
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/db-health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+    stop_grace_period: 30s
+    restart: "no"
+
+volumes:
+  production_pgdata:
