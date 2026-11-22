@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from uuid import UUID
 from app.ai_planner.interfaces import AIPlannerServiceInterface
 from app.auth.dependencies import get_current_user
+from app.core.rate_limiting import require_ai_request
 
 router = APIRouter(prefix="/ai-planner", tags=["AI Planner"])
 
@@ -21,7 +22,7 @@ router = APIRouter(prefix="/ai-planner", tags=["AI Planner"])
 )
 def generate_plan(
     payload: AiPlannerChatRequest,
-    current_user = Depends(get_current_user),
+    current_user = Depends(require_ai_request),
     ai_planner_service: AIPlannerServiceInterface = Depends(get_limited_ai_planner_service),
     draft_engine: Engine = Depends(get_ai_draft_engine),
 ):

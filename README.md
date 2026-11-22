@@ -108,7 +108,26 @@ ACCESS_TOKEN_EXPIRE_MINUTES=60
 
 AI_API_KEY=your_gemini_api_key
 AI_MODEL=gemini-2.0-flash
+
+LOGIN_REQUESTS_PER_MINUTE=10
+SIGNUP_REQUESTS_PER_HOUR=10
+AI_REQUESTS_PER_MINUTE=3
+AI_DAILY_REQUEST_LIMIT=10
 ```
+
+The positive integer request limits apply per IP for login/signup and per
+authenticated user for AI generation. Successful and failed attempts count
+toward a fixed window starting with its first attempt. A rejected request returns `429`, code
+`REQUEST_RATE_LIMITED`, and a `Retry-After` header in seconds. Rejected AI
+bursts do not call the provider or consume the database-backed daily quota.
+
+Short windows use one API process's memory and reset on restart; do not run
+multiple API workers/replicas with this limiter. Expired counters are reclaimed,
+and at 1024 active endpoint/identity counters, new identities are temporarily
+rejected without evicting existing counters. IPs come from the ASGI client;
+configure only trusted proxy addresses at the server before public deployment,
+and keep direct access to the backend restricted behind that proxy. Clients
+sharing a public IP share login/signup limits.
 
 The frontend API base URL can be configured with `VITE_API_BASE_URL`. If it is not set, the frontend defaults to `http://localhost:8000`.
 

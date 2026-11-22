@@ -101,13 +101,16 @@ def ai_auth(client):
 
 
 def configure(monkeypatch, **kwargs):
+    from app.core import rate_limiting
     settings = Settings(_env_file=None, ai_api_key="test-key", ai_model="test-model", **kwargs)
     monkeypatch.setattr(dependencies, "get_settings", lambda: settings)
+    monkeypatch.setattr(rate_limiting, "get_settings", lambda: settings)
     return settings
 
 
 def test_http_ten_requests_then_quota_error_with_reset(client, db, ai_auth, sdk_transport, monkeypatch):
-    configure(monkeypatch)
+    # Exercise the daily quota independently of the shorter burst window.
+    configure(monkeypatch, ai_requests_per_minute=100)
     sdk_transport[0].append(SUCCESS)
     headers, user_id = ai_auth
     for _ in range(10):

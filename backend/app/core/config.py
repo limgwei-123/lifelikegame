@@ -19,6 +19,10 @@ class Settings(BaseSettings):
     timezone: str = "Asia/Kuala_Lumpur"
     scheduler_enabled: bool = True
 
+    login_requests_per_minute: int = Field(default=10, gt=0)
+    signup_requests_per_hour: int = Field(default=10, gt=0)
+    ai_requests_per_minute: int = Field(default=3, gt=0)
+
     ai_provider: str = "gemini"
     ai_daily_request_limit: int = Field(default=10, gt=0)
     ai_price_profiles: str | None = None

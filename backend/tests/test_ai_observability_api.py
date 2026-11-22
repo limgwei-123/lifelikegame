@@ -70,7 +70,8 @@ def test_provider_errors_preserve_http_contract_and_known_usage(client, db, ai_a
 
 
 def test_blocked_or_invalid_requests_have_no_invocation_row(client, db, ai_auth, sdk_transport, monkeypatch):
-    settings = configure(monkeypatch, ai_daily_request_limit=1)
+    # Reach every admission/telemetry branch without hitting the burst limit.
+    settings = configure(monkeypatch, ai_daily_request_limit=1, ai_requests_per_minute=100)
     headers, user_id = ai_auth
     assert client.post("/ai-planner/generate-plan", json={"user_prompt": "Hi"}).status_code in (401, 403)
     assert client.post("/ai-planner/generate-plan", headers=headers, json={}).status_code == 422

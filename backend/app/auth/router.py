@@ -6,6 +6,7 @@ from app.users.schemas import UserMeResponse
 from app.auth.security import create_access_token
 from app.auth.dependencies import get_auth_service
 from app.auth.interfaces import AuthServiceInterface
+from app.core.rate_limiting import limit_login, limit_signup
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -13,7 +14,8 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 @router.post(
   "/signup",
   response_model=UserMeResponse,
-  status_code=status.HTTP_201_CREATED
+  status_code=status.HTTP_201_CREATED,
+  dependencies=[Depends(limit_signup)],
 )
 def signup(payload: SignupRequest, auth_service: AuthServiceInterface = Depends(get_auth_service)):
 
@@ -28,7 +30,7 @@ def signup(payload: SignupRequest, auth_service: AuthServiceInterface = Depends(
     current_value=0
   )
 
-@router.post("/login", response_model=TokenResponse)
+@router.post("/login", response_model=TokenResponse, dependencies=[Depends(limit_login)])
 def login(payload: LoginRequest, auth_service: AuthServiceInterface = Depends(get_auth_service)):
   user = auth_service.authenticate_user(
     email=payload.email,
