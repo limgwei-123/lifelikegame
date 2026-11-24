@@ -113,4 +113,7 @@ def test_standalone_migration_offline_sql_and_single_head():
     assert "ALTER COLUMN goal_id DROP NOT NULL" in sql
     assert "ck_tasks_standalone_unscored" in sql
     assert "ALTER COLUMN goal_id SET NOT NULL" in sql
-    assert ScriptDirectory(str(BACKEND / "alembic")).get_heads() == [REVISION]
+    scripts = ScriptDirectory(str(BACKEND / "alembic"))
+    heads = scripts.get_heads()
+    assert len(heads) == 1
+    assert REVISION in {item.revision for item in scripts.iterate_revisions(heads[0], "base")}

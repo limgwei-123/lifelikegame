@@ -12,6 +12,7 @@ from app.rewards.router import router as reward_router
 from app.redemptions.router import router as redemption_router
 from app.ai_planner.router import router as ai_planner_router
 from app.workflows.router import router as workflow_router
+from app.progress.router import router as progress_router
 
 router = APIRouter(
   dependencies=[Depends(get_current_user)]
@@ -28,3 +29,4 @@ router.include_router(reward_router)
 router.include_router(redemption_router)
 router.include_router(workflow_router)
 router.include_router(ai_planner_router)
+router.include_router(progress_router)

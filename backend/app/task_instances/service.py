@@ -18,15 +18,18 @@ from app.errors.exception import ConflictError, NotFoundError, RequestValidation
 from app.shared.enums import EntryType
 from app.point_ledgers.schemas import CreatePointLedgerRequest
 from app.task_instances.dtos import CompleteTaskInstanceResultDTO, GenerateTaskInstancesResultDTO
+from app.progress.service import ProgressService
 
 class TaskInstanceService:
   def __init__(self, task_instance_repo: TaskInstanceRepository, task_service: TaskServiceInterface,
-               task_schedule_service: TaskScheduleServiceInterface, point_ledger_service: PointLedgerServiceInterface, user_service: UserServiceInterface):
+               task_schedule_service: TaskScheduleServiceInterface, point_ledger_service: PointLedgerServiceInterface,
+               user_service: UserServiceInterface, progress_service: ProgressService):
     self.task_instance_repo = task_instance_repo
     self.task_service = task_service
     self.task_schedule_service = task_schedule_service
     self.point_ledger_service = point_ledger_service
     self.user_service = user_service
+    self.progress_service = progress_service
 
   def create_task_instance_for_date(self, task_id, task_schedule_id, user_id, date_instance):
     task = self.task_service.get_task_by_id(task_id=task_id, user_id=user_id)
@@ -122,6 +125,8 @@ class TaskInstanceService:
 
     task = self.task_service.get_task_by_id(task_id=task_instance.task_id, user_id=user_id)
 
+    was_done = task_instance.status == TaskInstanceStatus.DONE
+
     if task.goal_id is None:
       if completion_level is not None:
         raise RequestValidationError([{
@@ -132,8 +137,7 @@ class TaskInstanceService:
       task_instance.completion_level = None
       task_instance.score_awarded = 0
       updated_instance = self.task_instance_repo.update(task_instance)
-      user = self.user_service.get_user_by_id(user_id=user_id)
-      return CompleteTaskInstanceResultDTO(task_instance=updated_instance, user=user, point_ledger=None)
+      return self._completion_result(updated_instance, user_id, was_done, False, None)
 
     scoring_snapshot = task_instance.scoring_snapshot_json or {}
     if completion_level is None and len(scoring_snapshot) == 1:
@@ -160,12 +164,7 @@ class TaskInstanceService:
     )
 
     if delta == 0:
-      user = self.user_service.get_user_by_id(user_id=user_id)
-      return CompleteTaskInstanceResultDTO(
-        task_instance=updated_instance,
-        user=user,
-        point_ledger=None
-      )
+      return self._completion_result(updated_instance, user_id, was_done, True, None)
 
     point_ledger_request = CreatePointLedgerRequest(
       delta=delta,
@@ -181,12 +180,15 @@ class TaskInstanceService:
       payload=point_ledger_request
     )
 
-    user = self.user_service.get_user_by_id(user_id=user_id)
+    return self._completion_result(updated_instance, user_id, was_done, True, point_ledger)
 
+  def _completion_result(self, task_instance, user_id, was_done, is_goal_task, point_ledger):
+    if not was_done:
+      self.progress_service.record_completion(user_id, task_instance.id, is_goal_task)
+    progress = self.progress_service.get_progress(user_id)
+    user = self.user_service.get_user_by_id(user_id=user_id)
     return CompleteTaskInstanceResultDTO(
-      task_instance=updated_instance,
-      user=user,
-      point_ledger=point_ledger
+      task_instance=task_instance, user=user, point_ledger=point_ledger, progress=progress,
     )
 
 

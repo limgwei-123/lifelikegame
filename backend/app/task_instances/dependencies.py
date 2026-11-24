@@ -17,6 +17,7 @@ from app.task_instances.service import TaskInstanceService
 from app.point_ledgers.dependencies import build_point_ledger_service
 from app.users.dependencies import build_user_service
 from app.task_instances.validators import CompleteTaskInstanceCommandValidator
+from app.progress.dependencies import build_progress_service
 
 
 def build_task_instance_service(db: Session) -> TaskInstanceServiceInterface:
@@ -26,7 +27,8 @@ def build_task_instance_service(db: Session) -> TaskInstanceServiceInterface:
         task_schedule_service=build_task_schedule_service(db),
         task_instance_repo=TaskInstanceRepository(db),
         point_ledger_service=build_point_ledger_service(db),
-        user_service=build_user_service(db)
+        user_service=build_user_service(db),
+        progress_service=build_progress_service(db),
     )
 
 

@@ -327,6 +327,35 @@ approving the target database migration. Existing goal tasks are preserved; a
 downgrade refuses to proceed while any standalone tasks remain, including
 soft-deleted ones, rather than deleting or reassigning them.
 
+### Player progress
+
+`GET /progress` returns only the authenticated player's completed-today/total
+counts, current/longest streaks, total damage, current Boss, round roster, and
+defeated count. The completion response also includes a `progress` summary.
+No public endpoint can write completion history or set Boss HP.
+
+Only newly completed task instances create a history row. Existing DONE
+instances are not backfilled, including when retried or rescored; existing
+points are preserved. All players start at zero damage with a 2-HP slime.
+Ordinary todos count for streaks but not damage. Each goal-task completion
+deals exactly one damage, including zero-point scoring levels. Retries and
+score adjustments never add another history row or damage.
+
+Boss base HP is `2, 4, 7, 12, 20, 30`. After six defeats the cycle repeats,
+adding 30 HP per round (`32, 34, 37, 42, 50, 60` in round two). Artwork remains
+a frontend concern; stable Boss IDs identify the assets.
+
+Streaks use the first actual completion time in the player's IANA timezone,
+not the task's scheduled date. At least one completion makes a local day active.
+A streak ending yesterday stays active during today; missing an entire day
+breaks it. Historical local dates/timezone snapshots are retained when the
+user's timezone changes. Task/goal deletion does not remove earned progress.
+
+Migration `f2b8d6a0c413` creates empty history, without altering legacy tasks or
+points. Completion writes, points, and progress records share the existing UoW.
+Downgrade (including generated offline SQL) refuses to discard nonempty history.
+Apply database migrations only after separately approving the target database.
+
 ## AI Planner Workflow
 
 The AI Planner lives in `backend/app/ai_planner`. It builds a prompt from the user input and conversation history, sends it to the Gemini API, and expects the model to return JSON only.

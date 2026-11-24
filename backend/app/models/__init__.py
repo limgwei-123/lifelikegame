@@ -10,3 +10,4 @@ from app.redemptions.models import Redemption
 from app.ai_planner.usage_models import AIDailyUsage
 from app.ai_planner.usage_record_models import AIUsageRecord
 from app.ai_planner.draft_models import AIPlanDraft
+from app.progress.models import TaskCompletion

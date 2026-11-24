@@ -4,6 +4,7 @@ import uuid
 from typing import Any
 from app.users.schemas import UserMeResponse
 from app.point_ledgers.schemas import PointLedgerResponse
+from app.progress.schemas import ProgressResponse
 
 from datetime import date, datetime
 from typing import Any
@@ -36,5 +37,6 @@ class CompleteTaskInstanceResponse(BaseModel):
     task_instance: TaskInstanceResponse
     user: UserMeResponse
     point_ledger: PointLedgerResponse | None
+    progress: ProgressResponse | None = None
 class CompleteTaskInstanceRequest(BaseModel):
     completion_level: str | None = Field(default=None, min_length=1, max_length=100)
