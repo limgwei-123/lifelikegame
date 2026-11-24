@@ -78,8 +78,8 @@ def smoke(image):
             raise AssertionError(f"{method} {path}: expected {status}, received {actual}")
         return data
 
-    def sql(statement):
-        return docker("exec", db, "psql", "-U", "postgres", "-d", "lifelikegame_smoke",
+    def sql(statement, database="lifelikegame_smoke"):
+        return docker("exec", db, "psql", "-U", "postgres", "-d", database,
                       "-v", "ON_ERROR_STOP=1", "-tAc", statement).stdout.strip()
 
     env = ["-e", "DATABASE_URL=postgresql://postgres:smoke-only-password@" + db + ":5432/lifelikegame_smoke",
@@ -145,19 +145,32 @@ def smoke(image):
         wait_for(lambda: request("GET", "/db-health")[0] == 200, "database recovery")
         print("PASS: liveness/readiness during database outage and recovery", flush=True)
 
-        # Stop before migrating, exactly as the documented release procedure.
+        # Keep earned progress intact. Build the invalid legacy fixture in a
+        # separate disposable database instead of downgrading completed tasks.
         docker("stop", "--time", "10", api)
+        assert sql("SELECT count(*) FROM task_completions") == "1"
+        legacy_database = "lifelikegame_smoke_legacy"
+        sql(f"CREATE DATABASE {legacy_database}")
+        legacy_env = ["-e", "DATABASE_URL=postgresql://postgres:smoke-only-password@"
+                      + db + ":5432/" + legacy_database, *env[2:]]
         previous = "c3d8f5b0e721"
-        docker("run", "--rm", "--network", network, *env, "--entrypoint", "alembic", image, "downgrade", previous)
-        sql(f"UPDATE rewards SET cost_points=-1 WHERE id={int(reward['id'])}")
+        docker("run", "--rm", "--network", network, *legacy_env,
+               "--entrypoint", "alembic", image, "upgrade", previous)
+        legacy_user_id = str(uuid4())
+        sql(f"""INSERT INTO users (id, email, password_hash, timezone, created_at, current_value)
+            VALUES ('{legacy_user_id}', 'legacy-smoke@example.com', 'unused', 'Asia/Kuala_Lumpur', NOW(), 0);
+            INSERT INTO rewards (id, user_id, title, cost_points, status, created_at, updated_at)
+            VALUES (1, '{legacy_user_id}', 'Invalid historical reward', -1, 'available', NOW(), NOW());
+            """, database=legacy_database)
         failed = prefix + "-migration-refusal"
         owned_containers.append(failed)
-        docker("run", "-d", "--name", failed, "--network", network, *env, image)
+        docker("run", "-d", "--name", failed, "--network", network, *legacy_env, image)
         wait_for(lambda: docker("inspect", "--format", "{{.State.Running}}", failed).stdout.strip() == "false",
                  "invalid-history refusal")
         assert docker("inspect", "--format", "{{.State.ExitCode}}", failed).stdout.strip() == "1"
-        assert sql("SELECT version_num FROM alembic_version") == previous
-        assert sql(f"SELECT cost_points FROM rewards WHERE id={int(reward['id'])}") == "-1"
+        assert sql("SELECT version_num FROM alembic_version", database=legacy_database) == previous
+        assert sql("SELECT cost_points FROM rewards WHERE id=1", database=legacy_database) == "-1"
+        assert sql("SELECT count(*) FROM task_completions") == "1"
         logs = docker("logs", failed).stdout + docker("logs", failed).stderr
         assert "production_startup_failed" in logs
         assert "smoke-only-password" not in logs and "Traceback" not in logs
