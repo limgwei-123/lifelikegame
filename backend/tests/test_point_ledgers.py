@@ -1,4 +1,4 @@
-def test_create_point_ledger(client, auth_headers):
+def test_public_point_ledger_creation_is_forbidden(client, auth_headers):
 
   response = client.post(
     "/point_ledgers",
@@ -13,7 +13,7 @@ def test_create_point_ledger(client, auth_headers):
 }
   )
 
-  assert response.status_code in (200, 201)
+  assert response.status_code == 403
 
 
 def test_list_point_ledger(client, auth_headers):

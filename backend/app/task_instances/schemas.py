@@ -37,4 +37,4 @@ class CompleteTaskInstanceResponse(BaseModel):
     user: UserMeResponse
     point_ledger: PointLedgerResponse | None
 class CompleteTaskInstanceRequest(BaseModel):
-    completion_level: str = Field(min_length=1, max_length=100)
+    completion_level: str | None = Field(default=None, min_length=1, max_length=100)

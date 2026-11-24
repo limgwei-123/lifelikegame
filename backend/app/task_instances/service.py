@@ -14,7 +14,7 @@ from app.users.interfaces import UserServiceInterface
 
 from app.task_schedules.models import ScheduleType
 
-from app.errors.exception import ConflictError, NotFoundError
+from app.errors.exception import ConflictError, NotFoundError, RequestValidationError
 from app.shared.enums import EntryType
 from app.point_ledgers.schemas import CreatePointLedgerRequest
 from app.task_instances.dtos import CompleteTaskInstanceResultDTO, GenerateTaskInstancesResultDTO
@@ -111,7 +111,7 @@ class TaskInstanceService:
       self,
       task_instance_id:int,
       user_id,
-      completion_level: str
+      completion_level: str | None = None
   ):
     task_instance = self.task_instance_repo.get_by_id_and_user_id_for_update(
       task_instance_id=task_instance_id,
@@ -120,11 +120,28 @@ class TaskInstanceService:
     if not task_instance:
       raise NotFoundError("Task Instance not found")
 
-    self.task_service.get_task_by_id(task_id=task_instance.task_id, user_id=user_id)
+    task = self.task_service.get_task_by_id(task_id=task_instance.task_id, user_id=user_id)
+
+    if task.goal_id is None:
+      if completion_level is not None:
+        raise RequestValidationError([{
+          "field": "completion_level", "message": "Standalone tasks do not accept a scoring level",
+          "code": "unscored_task",
+        }])
+      task_instance.status = TaskInstanceStatus.DONE
+      task_instance.completion_level = None
+      task_instance.score_awarded = 0
+      updated_instance = self.task_instance_repo.update(task_instance)
+      user = self.user_service.get_user_by_id(user_id=user_id)
+      return CompleteTaskInstanceResultDTO(task_instance=updated_instance, user=user, point_ledger=None)
 
     scoring_snapshot = task_instance.scoring_snapshot_json or {}
+    if completion_level is None and len(scoring_snapshot) == 1:
+      completion_level = next(iter(scoring_snapshot))
     if completion_level not in scoring_snapshot:
-      raise ValueError("Invalid completion level")
+      raise RequestValidationError([{
+        "field": "completion_level", "message": "Select a valid completion level", "code": "invalid_choice",
+      }])
 
     score_awarded = scoring_snapshot[completion_level]
 

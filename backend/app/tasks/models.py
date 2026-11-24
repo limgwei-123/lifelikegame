@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
-from sqlalchemy import ForeignKey, String, DateTime, Text, Boolean, JSON, Integer
+from sqlalchemy import CheckConstraint, ForeignKey, String, DateTime, Text, Boolean, JSON, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -11,6 +11,12 @@ if TYPE_CHECKING:
 
 class Task(Base):
    __tablename__ = "tasks"
+   __table_args__ = (
+      CheckConstraint(
+         "goal_id IS NOT NULL OR (scoring_scheme_id IS NULL AND scoring_scheme_json IS NULL)",
+         name="ck_tasks_standalone_unscored",
+      ),
+   )
 
    id: Mapped[int] = mapped_column(
     primary_key=True,
@@ -19,9 +25,9 @@ class Task(Base):
     index=True
   )
 
-   goal_id: Mapped[int] = mapped_column(
+   goal_id: Mapped[int | None] = mapped_column(
       ForeignKey("goals.id",ondelete="CASCADE"),
-      nullable=False,
+      nullable=True,
       index=True
    )
 
@@ -45,7 +51,7 @@ class Task(Base):
     )
 
    scoring_scheme_json: Mapped[dict | None] = mapped_column(
-        JSON,
+        JSON(none_as_null=True),
         nullable=True,
     )
 
@@ -73,7 +79,7 @@ class Task(Base):
          nullable=True,
       )
 
-   goal: Mapped["Goal"] = relationship("Goal", back_populates="tasks")
+   goal: Mapped["Goal | None"] = relationship("Goal", back_populates="tasks")
    user: Mapped["User"] = relationship("User",back_populates="tasks")
    scoring_scheme: Mapped["ScoringScheme | None"] = relationship(
     "ScoringScheme",

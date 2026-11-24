@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from uuid import UUID
 from app.tasks.schemas import TaskResponse
 from app.task_schedules.schemas import TaskScheduleResponse
@@ -17,6 +17,9 @@ from app.task_instances.schemas import TaskInstanceResponse
 class CreateTaskWithScheduleRequest(BaseModel):
     task: CreateTaskRequest
     schedule: CreateTaskScheduleRequest | None = None
+
+class CreateTaskWithOptionalGoalRequest(CreateTaskWithScheduleRequest):
+    goal_id: int | None = Field(default=None, strict=True, gt=0)
 
 class TaskWithScheduleResponse(BaseModel):
     task: TaskResponse

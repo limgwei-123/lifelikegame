@@ -13,6 +13,18 @@ from app.tasks.dtos import CreateTaskDTO, UpdateTaskDTO
 
 router = APIRouter(tags=["tasks"])
 
+
+@router.post('/tasks', response_model=TaskResponse, status_code=status.HTTP_201_CREATED)
+def create_standalone_task(
+    payload: CreateTaskRequest,
+    current_user=Depends(get_current_user),
+    task_service: TaskServiceInterface = Depends(get_task_service),
+):
+  return task_service.create_task(
+    goal_id=None, user_id=current_user.id,
+    payload=CreateTaskDTO(**payload.model_dump()),
+  )
+
 @router.post('/goals/{goal_id}/tasks', response_model= TaskResponse, status_code= status.HTTP_201_CREATED)
 def create_task(goal_id,
                 payload: CreateTaskRequest,

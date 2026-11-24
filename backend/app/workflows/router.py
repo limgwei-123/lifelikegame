@@ -13,6 +13,7 @@ from app.workflows.redemption_workflow.dependencies import get_redeem_reward_med
 
 from app.workflows.task_workflow.schemas import (
     CreateTaskWithScheduleRequest,
+    CreateTaskWithOptionalGoalRequest,
     TaskWithScheduleResponse,
     GoalTaskSchduleResponse,
     ConfirmAiPlanRequest
@@ -21,6 +22,21 @@ from app.workflows.task_workflow.schemas import (
 from app.workflows.redemption_workflow.schemas import RedeemRewardRequest,RedeemRewardResponse
 
 router = APIRouter(prefix="/workflows", tags=["workflows"])
+
+
+@router.post("/tasks", response_model=TaskWithScheduleResponse, status_code=status.HTTP_201_CREATED)
+def create_task_with_optional_goal(
+    payload: CreateTaskWithOptionalGoalRequest,
+    current_user=Depends(get_current_user),
+    mediator: Mediator = Depends(get_create_task_with_schedule_mediator),
+):
+    schedule = CreateTaskScheduleDTO(**payload.schedule.model_dump()) if payload.schedule else None
+    result = mediator.send(CreateTaskWithScheduleCommand(
+        goal_id=payload.goal_id,
+        user_id=current_user.id,
+        payload=CreateTaskWithScheduleDTO(task=CreateTaskDTO(**payload.task.model_dump()), schedule=schedule),
+    ))
+    return TaskWithScheduleResponse.model_validate(result, from_attributes=True)
 
 @router.post(
     "/goals/{goal_id}/tasks",

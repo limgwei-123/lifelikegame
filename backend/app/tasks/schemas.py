@@ -19,7 +19,7 @@ class UpdateTaskRequest(BaseModel):
   is_scoring_scheme_locked: bool = False
 class TaskResponse(BaseModel):
   id: int
-  goal_id: int
+  goal_id: int | None
   user_id: uuid.UUID
   title: str
   description: str | None

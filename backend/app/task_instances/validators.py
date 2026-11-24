@@ -16,6 +16,8 @@ class CompleteTaskInstanceCommandValidator:
         code="positive",
       ))
 
+    if command.completion_level is None:
+      return issues
     if not command.completion_level.strip():
       issues.append(ValidationIssue(
         field="completion_level",

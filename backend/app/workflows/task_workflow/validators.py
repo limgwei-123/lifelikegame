@@ -12,7 +12,7 @@ class CreateTaskWithScheduleCommandValidator:
   ) -> list[ValidationIssue]:
     issues = []
 
-    if command.goal_id <= 0:
+    if command.goal_id is not None and command.goal_id <= 0:
       issues.append(ValidationIssue(
         field="goal_id",
         message="Goal ID must be positive",

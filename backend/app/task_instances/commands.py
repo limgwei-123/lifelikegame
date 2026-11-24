@@ -9,7 +9,7 @@ from app.core.cqrs import TransactionalCommand
 class CompleteTaskInstanceCommand(TransactionalCommand):
   task_instance_id: int
   user_id: uuid.UUID
-  completion_level: str
+  completion_level: str | None = None
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

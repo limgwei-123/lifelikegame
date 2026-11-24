@@ -275,15 +275,8 @@ def test_point_posting_cannot_select_another_users_account(client, db, ownership
     response = client.post("/point_ledgers", headers=case[actor]["headers"], json={
         "delta": 7, "entry_type": "earn", "user_id": str(case["owner"]["user"].id),
     })
-    assert response.status_code == (401 if actor == "anonymous" else 201), response.text
-    if actor == "anonymous":
-        assert snapshot(db, case) == before
-    else:
-        assert response.json()["user_id"] == str(case[actor]["user"].id)
-        db.expire_all()
-        assert case[actor]["user"].current_value == (107 if actor == "owner" else 207)
-        other = "other" if actor == "owner" else "owner"
-        assert case[other]["user"].current_value == (200 if other == "other" else 100)
+    assert response.status_code == (401 if actor == "anonymous" else 403), response.text
+    assert snapshot(db, case) == before
 
 
 @pytest.mark.parametrize("actor", ["owner", "other", "anonymous"])

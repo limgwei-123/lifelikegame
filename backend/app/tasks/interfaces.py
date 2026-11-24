@@ -4,7 +4,7 @@ from app.tasks.models import Task
 from app.tasks.dtos import CreateTaskDTO, UpdateTaskDTO
 
 class TaskServiceInterface(Protocol):
-  def create_task(self, goal_id: int, user_id: uuid.UUID, payload: CreateTaskDTO) -> Task:
+  def create_task(self, goal_id: int | None, user_id: uuid.UUID, payload: CreateTaskDTO) -> Task:
     ...
 
   def list_tasks_by_goal_id(self, goal_id: int, user_id: uuid.UUID) -> list[Task]:

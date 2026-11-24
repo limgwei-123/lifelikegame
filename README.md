@@ -303,6 +303,30 @@ JWT-protected endpoint groups:
 - `/workflows`: Combined business workflows
 - `/ai-planner`: AI plan generation
 
+### Standalone todos and point posting
+
+`POST /workflows/tasks` creates a task and its optional schedule in one transaction.
+The top-level `goal_id` may be omitted or `null` for an ordinary todo, or set to
+one of the authenticated user's goals. Existing `/workflows/goals/{goal_id}/tasks`
+and `/goals/{goal_id}/tasks` routes remain available. `POST /tasks` creates a
+standalone task without a schedule.
+
+Standalone tasks have no scoring scheme and reject scoring configuration. They
+use the same one-time/daily/weekly/monthly schedules as goal tasks. Complete a
+standalone instance with `POST /task_instances/{id}/complete` and `{}`: its score
+stays zero and no point ledger entry is created. Goal instances can also omit
+`completion_level` when their saved scoring snapshot has exactly one level;
+multiple levels still require an explicit selection.
+
+`POST /point_ledgers` now returns **403** for authenticated clients (**401** for
+unauthenticated requests). Task completion and reward redemption post entries
+internally; listing, balance, and reconciliation endpoints remain readable.
+
+These changes require migration `e8a4c2b6d901`. Apply it only after separately
+approving the target database migration. Existing goal tasks are preserved; a
+downgrade refuses to proceed while any standalone tasks remain, including
+soft-deleted ones, rather than deleting or reassigning them.
+
 ## AI Planner Workflow
 
 The AI Planner lives in `backend/app/ai_planner`. It builds a prompt from the user input and conversation history, sends it to the Gemini API, and expects the model to return JSON only.

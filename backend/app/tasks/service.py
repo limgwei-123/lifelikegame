@@ -4,7 +4,7 @@ from app.scoring_schemes.interfaces import ScoringSchemeServiceInterface
 
 from app.tasks.dtos import CreateTaskDTO, UpdateTaskDTO
 
-from app.errors.exception import NotFoundError
+from app.errors.exception import NotFoundError, RequestValidationError
 from app.tasks.models import Task
 from app.shared.function import get_scoring_scheme_workflow
 
@@ -17,19 +17,27 @@ class TaskService:
 
 
   def create_task(self, goal_id, user_id, payload: CreateTaskDTO):
-    goal = self.goal_service.get_goal_by_id(goal_id=goal_id, user_id=user_id)
-
-    scoring_scheme = get_scoring_scheme_workflow(scoring_scheme_id=payload.scoring_scheme_id,scoring_scheme_service=self.scoring_scheme_service, user_id=user_id)
+    if not payload.title.strip() or len(payload.title) > 255:
+      raise RequestValidationError([{
+        "field": "title", "message": "Task title must contain 1 to 255 characters",
+        "code": "invalid_length",
+      }])
+    scoring_scheme = None
+    if goal_id is None:
+      self._validate_unscored(payload.scoring_scheme_id, payload.scoring_scheme_json)
+    else:
+      self.goal_service.get_goal_by_id(goal_id=goal_id, user_id=user_id)
+      scoring_scheme = get_scoring_scheme_workflow(scoring_scheme_id=payload.scoring_scheme_id,scoring_scheme_service=self.scoring_scheme_service, user_id=user_id)
 
     task = Task(
       title= payload.title,
       description=payload.description,
       is_active=payload.is_active,
-      scoring_scheme_id=scoring_scheme.id,
-      scoring_scheme_json=scoring_scheme.levels_json,
+      scoring_scheme_id=scoring_scheme.id if scoring_scheme else None,
+      scoring_scheme_json=scoring_scheme.levels_json if scoring_scheme else None,
       is_scoring_scheme_locked=payload.is_scoring_scheme_locked,
       user_id=user_id,
-      goal_id = goal.id
+      goal_id = goal_id
     )
     return self.task_repo.create(task)
 
@@ -49,12 +57,19 @@ class TaskService:
   def update_task(self, task_id, user_id, data: UpdateTaskDTO):
     task = self.get_task_by_id(task_id=task_id, user_id=user_id)
 
+    if task.goal_id is None:
+      self._validate_unscored(data.changes.get("scoring_scheme_id"), data.changes.get("scoring_scheme_json"))
+
     scoring_scheme_id = data.changes.get("scoring_scheme_id")
     if scoring_scheme_id is not None:
       self.scoring_scheme_service.get_usable_scoring_scheme_by_id(scoring_scheme_id, user_id)
 
     for field, value in data.changes.items():
         setattr(task, field, value)
+
+    if task.goal_id is None:
+      task.scoring_scheme_id = None
+      task.scoring_scheme_json = None
 
     return self.task_repo.update(
       task
@@ -64,3 +79,11 @@ class TaskService:
     task = self.get_task_by_id(task_id=task_id, user_id=user_id)
 
     self.task_repo.delete(task)
+
+  @staticmethod
+  def _validate_unscored(scoring_scheme_id, scoring_scheme_json):
+    if scoring_scheme_id is not None or scoring_scheme_json:
+      raise RequestValidationError([{
+        "field": "scoring_scheme_id", "message": "Standalone tasks cannot have a scoring scheme",
+        "code": "unscored_task",
+      }])

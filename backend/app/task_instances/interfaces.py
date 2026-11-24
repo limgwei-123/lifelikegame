@@ -33,7 +33,7 @@ class TaskInstanceServiceInterface(Protocol):
       self,
       task_instance_id: int,
       user_id: uuid.UUID,
-      completion_level: str
+      completion_level: str | None = None
   ) -> CompleteTaskInstanceResultDTO:
     ...
 

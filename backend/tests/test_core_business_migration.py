@@ -162,7 +162,10 @@ def test_constraint_migration_offline_sql_and_single_head():
     assert "ALTER COLUMN status SET NOT NULL" in sql
     assert "ck_redemptions_cost_points_nonnegative" in sql
     assert "DROP CONSTRAINT ck_task_instances_status" in sql
-    assert ScriptDirectory(str(BACKEND / "alembic")).get_heads() == [REVISION]
+    scripts = ScriptDirectory(str(BACKEND / "alembic"))
+    heads = scripts.get_heads()
+    assert len(heads) == 1
+    assert REVISION in {item.revision for item in scripts.iterate_revisions(heads[0], "base")}
 
 
 def test_upgrade_reports_invalid_soft_deleted_history_across_tables(isolated_database):

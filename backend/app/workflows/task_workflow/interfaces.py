@@ -12,7 +12,7 @@ from app.ai_planner.draft_schemas import DraftPlan
 class TaskWorkflowServiceInterface(Protocol):
   def create_task_with_schedule(
       self,
-      goal_id: int,
+      goal_id: int | None,
       user_id: uuid.UUID,
       payload: CreateTaskWithScheduleDTO
   ) -> TaskWithScheduleResultDTO:

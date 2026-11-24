@@ -70,6 +70,16 @@ def _payload(delta):
     return {"delta": delta, "entry_type": "adjustment", "source_type": "test"}
 
 
+def _post_internal(db, user_id, payload):
+    with Session(db.get_bind()) as session:
+        with build_unit_of_work(session).begin():
+            ledger = build_point_ledger_service(session).create_point_ledger(
+                user_id=user_id, payload=CreatePointLedgerRequest(**payload),
+            )
+            ledger_id = ledger.id
+    return ledger_id
+
+
 def _state(db, user_id):
     with Session(db.get_bind()) as reader:
         return (
@@ -80,27 +90,26 @@ def _state(db, user_id):
         )
 
 
-def test_direct_ledger_writes_update_the_cached_balance_once(client, db, points_user):
+def test_internal_ledger_writes_update_the_cached_balance_once(client, db, points_user):
     headers = points_user["headers"]
-    assert client.post("/point_ledgers", headers=headers, json=_payload(100)).status_code == 201
+    _post_internal(db, points_user["user_id"], _payload(100))
     assert _state(db, points_user["user_id"]) == (100, [100])
-    assert client.post("/point_ledgers", headers=headers, json=_payload(-30)).status_code == 201
+    _post_internal(db, points_user["user_id"], _payload(-30))
     assert _state(db, points_user["user_id"]) == (70, [100, -30])
     assert client.get("/point_ledgers/balance", headers=headers).json() == {"balance": 70}
 
 
 def test_ledger_posting_without_optional_source_still_commits_both_writes(client, db, points_user):
-    response = client.post("/point_ledgers", headers=points_user["headers"],
-                           json={"delta": 10, "entry_type": "adjustment"})
-    assert response.status_code == 201
-    assert response.json()["source_type"] is None
+    ledger_id = _post_internal(db, points_user["user_id"], {"delta": 10, "entry_type": "adjustment"})
+    with Session(db.get_bind()) as reader:
+        assert reader.get(PointLedger, ledger_id).source_type is None
     assert _state(db, points_user["user_id"]) == (10, [10])
 
 
 @pytest.mark.parametrize("repository,method_name", [
     (PointLedgerRepository, "create"), (UserRepository, "update_user_point"),
 ])
-def test_direct_ledger_failure_rolls_back_both_writes(
+def test_internal_ledger_failure_rolls_back_both_writes(
     client, db, points_user, monkeypatch, repository, method_name,
 ):
     original = getattr(repository, method_name)
@@ -112,9 +121,9 @@ def test_direct_ledger_failure_rolls_back_both_writes(
     with monkeypatch.context() as patch:
         patch.setattr(repository, method_name, fail_after_flush)
         with pytest.raises(RuntimeError, match="injected points failure"):
-            client.post("/point_ledgers", headers=points_user["headers"], json=_payload(10))
+            _post_internal(db, points_user["user_id"], _payload(10))
     assert _state(db, points_user["user_id"]) == (0, [])
-    assert client.post("/point_ledgers", headers=points_user["headers"], json=_payload(10)).status_code == 201
+    _post_internal(db, points_user["user_id"], _payload(10))
     assert _state(db, points_user["user_id"]) == (10, [10])
 
 
@@ -227,7 +236,7 @@ def test_concurrent_completion_awards_each_score_change_once(
 
 
 def test_redemption_spends_ledger_funding_without_a_second_balance_debit(client, db, points_user):
-    assert client.post("/point_ledgers", headers=points_user["headers"], json=_payload(100)).status_code == 201
+    _post_internal(db, points_user["user_id"], _payload(100))
     reward = Reward(user_id=points_user["user_id"], title="Funded reward", cost_points=30)
     db.add(reward)
     db.commit()

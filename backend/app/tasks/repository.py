@@ -4,6 +4,7 @@ from app.users.models import User
 from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 
 class TaskRepository:
   def __init__(self, db: Session):
@@ -21,7 +22,7 @@ class TaskRepository:
   def _query(self):
     return self.db.query(Task).filter(
       Task.deleted_at.is_(None),
-      Task.goal.has(Goal.deleted_at.is_(None)),
+      or_(Task.goal_id.is_(None), Task.goal.has(Goal.deleted_at.is_(None))),
       Task.user.has(User.deleted_at.is_(None)),
     )
 

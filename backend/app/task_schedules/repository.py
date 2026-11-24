@@ -3,7 +3,7 @@ from app.tasks.models import Task
 from app.goals.models import Goal
 from app.users.models import User
 from datetime import datetime, timezone
-from sqlalchemy import and_
+from sqlalchemy import and_, or_
 
 from sqlalchemy.orm import Session
 
@@ -30,7 +30,7 @@ class TaskScheduleRepository:
       TaskSchedule.deleted_at.is_(None),
       TaskSchedule.task.has(and_(
         Task.deleted_at.is_(None),
-        Task.goal.has(Goal.deleted_at.is_(None)),
+        or_(Task.goal_id.is_(None), Task.goal.has(Goal.deleted_at.is_(None))),
         Task.user.has(User.deleted_at.is_(None)),
       )),
     )

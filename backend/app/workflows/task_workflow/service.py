@@ -1,5 +1,3 @@
-from dataclasses import replace
-
 from app.tasks.interfaces import TaskServiceInterface
 from app.task_schedules.interfaces import TaskScheduleServiceInterface
 from app.goals.interfaces import GoalServiceInterface
@@ -10,7 +8,7 @@ from app.workflows.task_workflow.dtos import CreateTaskWithScheduleDTO, TaskWith
 from app.workflows.task_workflow.schemas import TaskWithScheduleResponse,GoalTaskSchduleResponse
 from app.ai_planner.draft_schemas import DraftPlan
 
-from app.shared.function import get_scoring_scheme_workflow, generate_task_instances_for_today
+from app.shared.function import generate_task_instances_for_today
 from app.workflows.task_workflow.mappers import map_plan_to_goal_request,map_plan_to_task_with_schedule_requests
 
 class TaskWorkflowService:
@@ -28,18 +26,10 @@ class TaskWorkflowService:
 
   def create_task_with_schedule(self, goal_id, user_id, payload: CreateTaskWithScheduleDTO):
 
-    scoring_scheme = get_scoring_scheme_workflow(scoring_scheme_id=payload.task.scoring_scheme_id,scoring_scheme_service=self.scoring_scheme_service, user_id=user_id)
-
-    task_payload = replace(
-      payload.task,
-      scoring_scheme_id=scoring_scheme.id,
-      scoring_scheme_json=scoring_scheme.levels_json,
-    )
-
     task = self.task_service.create_task(
       goal_id=goal_id,
       user_id=user_id,
-      payload=task_payload,
+      payload=payload.task,
       )
 
     schedule = None
