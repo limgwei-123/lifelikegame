@@ -26,7 +26,7 @@ def verify_password(password: str, password_hash: str) -> bool:
   pre_hash = _sha256(password)
   return pwd_context.verify(pre_hash, password_hash)
 
-def create_access_token(sub: str, expire_minutes: Optional[int] = None) -> str:
+def create_access_token(sub: str, expire_minutes: Optional[int] = None, *, auth_version: int = 0) -> str:
   minutes = expire_minutes or ACCESS_TOKEN_EXPIRE_MINUTES
   now = datetime.now(timezone.utc)
   exp = now +timedelta(minutes=minutes)
@@ -35,6 +35,7 @@ def create_access_token(sub: str, expire_minutes: Optional[int] = None) -> str:
     "sub": sub,
     "iat": int(now.timestamp()),
     "exp": int(exp.timestamp()),
+    "auth_version": auth_version,
   }
 
   return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALG)

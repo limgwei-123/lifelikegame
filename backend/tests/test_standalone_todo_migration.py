@@ -18,6 +18,7 @@ from app.core.config import get_settings
 from app.goals.models import Goal
 from app.tasks.models import Task
 from app.users.models import User
+from migration_support import seed_legacy_user
 
 BACKEND = Path(__file__).resolve().parents[1]
 PREVIOUS = "d4e9a6c1f832"
@@ -47,9 +48,9 @@ def isolated_todo_database(db, monkeypatch):
 
 def seed_task(engine, standalone=False):
     with Session(engine) as session:
-        user = User(email=f"migration-todo-{uuid4()}@example.com", password_hash="unused")
-        goal = None if standalone else Goal(user=user, title="Existing goal")
-        task = Task(user=user, goal=goal, title="Preserved task", scoring_scheme_json=None if standalone else {"done": 5})
+        user_id = seed_legacy_user(session)
+        goal = None if standalone else Goal(user_id=user_id, title="Existing goal")
+        task = Task(user_id=user_id, goal=goal, title="Preserved task", scoring_scheme_json=None if standalone else {"done": 5})
         session.add(task)
         session.commit()
         return task.id

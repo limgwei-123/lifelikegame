@@ -8,7 +8,7 @@ from app.auth.interfaces import AuthServiceInterface
 from app.auth.service import AuthService
 
 from app.db import get_session
-from app.users.dependencies import build_user_service, get_user_service
+from app.users.dependencies import build_user_service, get_user_service, get_account_user_service
 from app.users.interfaces import UserServiceInterface
 from app.users.models import User
 
@@ -26,6 +26,12 @@ def build_auth_service(user_service: UserServiceInterface)-> AuthServiceInterfac
 def get_auth_service(
     user_service: UserServiceInterface = Depends(get_user_service)
 )-> AuthServiceInterface:
+  return build_auth_service(user_service)
+
+
+def get_account_auth_service(
+    user_service: UserServiceInterface = Depends(get_account_user_service),
+) -> AuthServiceInterface:
   return build_auth_service(user_service)
 
 def get_current_user(
@@ -47,7 +53,8 @@ def get_current_user(
 
   user = user_service.get_user_by_id(user_id)
 
-  if not user:
+  version = payload.get('auth_version', 0)
+  if not user or type(version) is not int or version < 0 or user.auth_version != version:
     raise _unauthorized("Invalid token")
 
   return user

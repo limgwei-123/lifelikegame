@@ -28,6 +28,12 @@ class PermissionDeniedError(AppError):
     status_code = 403
 
 
+class AuthenticationError(AppError):
+    code = "AUTHENTICATION_FAILED"
+    default_message = "Invalid credentials"
+    status_code = 401
+
+
 class ConflictError(AppError):
     code = "CONFLICT"
     default_message = "Conflict"

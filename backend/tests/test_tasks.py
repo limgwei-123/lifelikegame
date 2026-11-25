@@ -1,12 +1,13 @@
-def test_create_task(client, auth_headers,goal):
+def test_create_task(client, auth_headers, goal, scoring_scheme):
 
   task_response = client.post(
     f"/goals/{goal['id']}/tasks",
     headers=auth_headers,
-    json={"title": "Learn AI"}
+    json={"title": "Learn AI", "scoring_scheme_id": scoring_scheme['id']}
   )
 
   assert task_response.status_code in (200, 201)
+  assert task_response.json()['scoring_scheme_id'] == scoring_scheme['id']
 
 def test_list_tasks_by_goal_id(client, auth_headers, goal):
   tasks_response = client.get(

@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
-from sqlalchemy import String, DateTime, Integer
+from sqlalchemy import String, DateTime, Integer, CheckConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -11,6 +11,11 @@ if TYPE_CHECKING:
   from app.models import *
 class User(Base):
   __tablename__ = "users"
+  __table_args__ = (CheckConstraint('auth_version >= 0', name='ck_users_auth_version_nonnegative'),)
+
+  display_name: Mapped[str | None] = mapped_column(String(30), nullable=True)
+  avatar_key: Mapped[str] = mapped_column(String(20), default='leaf', server_default='leaf', nullable=False)
+  auth_version: Mapped[int] = mapped_column(Integer, default=0, server_default='0', nullable=False)
 
   id: Mapped[uuid.UUID] = mapped_column(
     UUID(as_uuid=True),

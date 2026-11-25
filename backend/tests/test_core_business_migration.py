@@ -23,6 +23,7 @@ from app.task_instances.models import TaskInstance
 from app.task_schedules.models import TaskSchedule
 from app.tasks.models import Task
 from app.users.models import User
+from migration_support import seed_legacy_user
 
 
 BACKEND = Path(__file__).resolve().parents[1]
@@ -55,15 +56,15 @@ def isolated_database(db, monkeypatch, request):
 
 def seed_history(engine):
     with Session(engine) as session:
-        user = User(email=f"migration-{uuid4()}@example.com", password_hash="unused")
-        goal = Goal(user=user, title="Existing goal")
-        task = Task(user=user, goal=goal, title="Existing task", scoring_scheme_json={"normal": 1})
-        schedule = TaskSchedule(user=user, task=task, schedule_type="daily", schedule_value_json={})
-        instance = TaskInstance(user=user, task=task, task_schedule=schedule,
+        user_id = seed_legacy_user(session)
+        goal = Goal(user_id=user_id, title="Existing goal")
+        task = Task(user_id=user_id, goal=goal, title="Existing task", scoring_scheme_json={"normal": 1})
+        schedule = TaskSchedule(user_id=user_id, task=task, schedule_type="daily", schedule_value_json={})
+        instance = TaskInstance(user_id=user_id, task=task, task_schedule=schedule,
                                 date_instance=date(2031, 1, 1), scoring_snapshot_json={"normal": 1})
-        reward = Reward(user=user, title="Existing reward", cost_points=10)
-        redemption = Redemption(user=user, reward=reward, cost_points=0, reward_snapshot_json={"title": "History"})
-        session.add_all([user, goal, task, schedule, instance, reward, redemption])
+        reward = Reward(user_id=user_id, title="Existing reward", cost_points=10)
+        redemption = Redemption(user_id=user_id, reward=reward, cost_points=0, reward_snapshot_json={"title": "History"})
+        session.add_all([goal, task, schedule, instance, reward, redemption])
         session.flush()
         ids = {"rewards": reward.id, "redemptions": redemption.id, "task_instances": instance.id}
         session.commit()

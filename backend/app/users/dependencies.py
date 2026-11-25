@@ -14,3 +14,8 @@ def build_user_service(db: Session) -> UserServiceInterface:
 
 def get_user_service(db: Session = Depends(get_db))->UserServiceInterface:
   return build_user_service(db)
+
+
+def get_account_user_service(db: Session = Depends(get_db, scope='function')) -> UserServiceInterface:
+  # Account writes must commit before the HTTP success response is sent.
+  return build_user_service(db)

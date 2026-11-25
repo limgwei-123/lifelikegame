@@ -1,5 +1,7 @@
 from typing import Protocol
+from uuid import UUID
 from app.users.models import User
+from app.users.schemas import UpdateProfileRequest
 
 class UserServiceInterface(Protocol):
 
@@ -18,4 +20,13 @@ class UserServiceInterface(Protocol):
     ...
 
   def create_user(self, email: str, password_hash: str) -> User:
+    ...
+
+  def get_authenticated_user_for_update(self, user_id: str | UUID, auth_version: int) -> User:
+    ...
+
+  def update_profile(self, user_id: str | UUID, auth_version: int, payload: UpdateProfileRequest) -> User:
+    ...
+
+  def update_password(self, user: User, password_hash: str) -> None:
     ...

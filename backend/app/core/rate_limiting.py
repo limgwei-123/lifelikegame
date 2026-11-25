@@ -81,3 +81,11 @@ def require_ai_request(
 ) -> User:
     limiter.check("ai-generate", str(current_user.id), RateLimitItemPerMinute(get_settings().ai_requests_per_minute))
     return current_user
+
+
+def require_password_change(
+    current_user: User = Depends(get_current_user),
+    limiter: RequestRateLimiter = Depends(get_request_limiter),
+) -> User:
+    limiter.check('change-password', str(current_user.id), RateLimitItemPerMinute(5))
+    return current_user

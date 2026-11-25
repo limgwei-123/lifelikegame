@@ -20,6 +20,7 @@ from app.task_instances.models import TaskInstance
 from app.task_schedules.models import TaskSchedule
 from app.tasks.models import Task
 from app.users.models import User
+from migration_support import seed_legacy_user
 
 BACKEND = Path(__file__).resolve().parents[1]
 PREVIOUS = 'e8a4c2b6d901'
@@ -48,21 +49,23 @@ def isolated_progress_database(db, monkeypatch):
 
 def legacy_instance(engine):
     with Session(engine) as session:
-        user = User(email=f'progress-migration-{uuid4()}@example.com', password_hash='unused', current_value=17)
-        goal = Goal(user=user, title='Old goal')
-        task = Task(user=user, goal=goal, title='Old task', scoring_scheme_json={'normal': 5})
-        schedule = TaskSchedule(user=user, task=task, schedule_type='daily', schedule_value_json={})
-        instance = TaskInstance(user=user, task=task, task_schedule=schedule, date_instance=date(2026, 1, 1),
+        user_id = seed_legacy_user(session, current_value=17)
+        goal = Goal(user_id=user_id, title='Old goal')
+        task = Task(user_id=user_id, goal=goal, title='Old task', scoring_scheme_json={'normal': 5})
+        schedule = TaskSchedule(user_id=user_id, task=task, schedule_type='daily', schedule_value_json={})
+        instance = TaskInstance(user_id=user_id, task=task, task_schedule=schedule, date_instance=date(2026, 1, 1),
                                 status='done', score_awarded=5, completion_level='normal', scoring_snapshot_json={'normal': 5})
-        session.add_all([user, goal, task, schedule, instance])
+        session.add_all([goal, task, schedule, instance])
         session.commit()
-        return user.id, instance.id, task.id
+        return user_id, instance.id, task.id
 
 
 def snapshots(engine):
     with engine.connect() as connection:
-        return {model.__tablename__: [dict(row) for row in connection.execute(sa.select(model)).mappings()]
-                for model in (User, TaskInstance, Task)}
+        tables = [sa.Table(name, sa.MetaData(), autoload_with=connection)
+                  for name in ('users', 'task_instances', 'tasks')]
+        return {table.name: [dict(row) for row in connection.execute(sa.select(table)).mappings()]
+                for table in tables}
 
 
 def test_migration_starts_every_player_from_zero_without_altering_legacy_data(isolated_progress_database):
@@ -123,7 +126,10 @@ def test_progress_migration_offline_guard_and_single_head():
     assert 'uq_task_completions_instance' in sql
     assert 'RAISE EXCEPTION' in sql and 'completion history' in sql
     assert 'DROP TABLE task_completions' in sql
-    assert ScriptDirectory(str(BACKEND / 'alembic')).get_heads() == [REVISION]
+    scripts = ScriptDirectory(str(BACKEND / 'alembic'))
+    heads = scripts.get_heads()
+    assert len(heads) == 1
+    assert REVISION in {item.revision for item in scripts.iterate_revisions(heads[0], 'base')}
 
 
 def test_generated_offline_downgrade_sql_really_preserves_nonempty_history(isolated_progress_database):
