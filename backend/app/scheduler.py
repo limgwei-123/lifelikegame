@@ -1,4 +1,3 @@
-from datetime import datetime
 import logging
 from time import perf_counter
 from uuid import uuid4
@@ -26,7 +25,6 @@ def run_generate_task_instances_for_today():
   db = None
   target_date = None
   try:
-    target_date = datetime.now(ZoneInfo(TIMEZONE)).date()
     db = SessionLocal()
     mediator = build_generate_task_instances_mediator(db)
     result = mediator.send(GenerateDailyTaskInstancesCommand(
@@ -34,7 +32,8 @@ def run_generate_task_instances_for_today():
     ))
     logger.info("scheduler_generation_completed", extra={
       "request_id": request_id,
-      "target_date": target_date.isoformat(),
+      "target_date": None,
+      "date_mode": "player_timezone",
       "processed_count": result.processed_count,
       "created_count": result.created_count,
       "outcome": "success",
@@ -45,6 +44,7 @@ def run_generate_task_instances_for_today():
     logger.exception("scheduler_generation_failed", extra={
       "request_id": request_id,
       "target_date": target_date.isoformat() if target_date else None,
+      "date_mode": "player_timezone",
       "processed_count": None,
       "created_count": None,
       "outcome": "failure",
@@ -68,8 +68,10 @@ def start_scheduler():
     scheduler.add_job(
       run_generate_task_instances_for_today,
       trigger="cron",
-      hour =0,
+      hour=0,
       minute=0,
+      max_instances=1,
+      coalesce=True,
       id="generate_task_instances_daily",
       replace_existing=True
     )

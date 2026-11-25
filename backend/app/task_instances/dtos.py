@@ -17,7 +17,7 @@ class CompleteTaskInstanceResultDTO:
 
 @dataclass(frozen=True, slots=True)
 class GenerateTaskInstancesResultDTO:
-  target_date: date
+  target_date: date | None
   task_instances: tuple[TaskInstance, ...]
   processed_count: int
   created_count: int

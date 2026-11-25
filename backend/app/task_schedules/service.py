@@ -8,6 +8,7 @@ from pydantic import ValidationError
 
 from app.errors.exception import NotFoundError, RequestValidationError
 from app.task_schedules.models import TaskSchedule
+from app.shared.dates import player_today
 class TaskScheduleService:
   def __init__(self, task_schedule_repo: TaskScheduleRepository, task_service: TaskServiceInterface):
     self.task_schedule_repo = task_schedule_repo
@@ -17,7 +18,8 @@ class TaskScheduleService:
   def create_task_schedule(self, task_id, user_id, payload: CreateTaskScheduleDTO):
     task = self.task_service.get_task_by_id(task_id=task_id, user_id=user_id)
 
-    self._validate_date_range(payload.start_date, payload.end_date)
+    start_date = payload.start_date if payload.start_date is not None else player_today(task.user.timezone)
+    self._validate_date_range(start_date, payload.end_date)
 
     self._validate_schedule_value(
     schedule_type=payload.schedule_type,
@@ -29,7 +31,7 @@ class TaskScheduleService:
       task_id = task.id,
       schedule_type= payload.schedule_type,
       schedule_value_json= payload.schedule_value_json,
-      start_date= payload.start_date,
+      start_date=start_date,
       end_date= payload.end_date
     )
 

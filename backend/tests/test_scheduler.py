@@ -1,5 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 import logging
 from threading import Barrier
 from unittest.mock import Mock
@@ -38,17 +38,11 @@ class FakeSession:
         self.closed = True
 
 
-class FixedDateTime:
-    @classmethod
-    def now(cls, timezone):
-        return datetime(2026, 10, 7, 0, 5, tzinfo=timezone)
-
-
 def test_daily_generation_job_sends_command_and_closes_session(monkeypatch):
     session = FakeSession()
     sent_requests = []
     expected_result = GenerateTaskInstancesResultDTO(
-        target_date=date(2026, 10, 7), task_instances=(),
+        target_date=None, task_instances=(),
         processed_count=3, created_count=0,
     )
 
@@ -58,7 +52,6 @@ def test_daily_generation_job_sends_command_and_closes_session(monkeypatch):
             return expected_result
 
     monkeypatch.setattr(scheduler_module, "SessionLocal", lambda: session)
-    monkeypatch.setattr(scheduler_module, "datetime", FixedDateTime)
     monkeypatch.setattr(
         scheduler_module,
         "build_generate_task_instances_mediator",
@@ -70,7 +63,7 @@ def test_daily_generation_job_sends_command_and_closes_session(monkeypatch):
     assert result is expected_result
     assert len(sent_requests) == 1
     assert isinstance(sent_requests[0], GenerateDailyTaskInstancesCommand)
-    assert sent_requests[0].target_date == date(2026, 10, 7)
+    assert sent_requests[0].target_date is None
     assert session.commits == 0
     assert session.rollbacks == 0
     assert session.closed is True
@@ -89,7 +82,6 @@ def test_scheduler_logs_committed_counts_with_cqrs_request_id(
             )
 
     monkeypatch.setattr(scheduler_module, "SessionLocal", lambda: session)
-    monkeypatch.setattr(scheduler_module, "datetime", FixedDateTime)
     monkeypatch.setattr(
         "app.task_instances.dependencies.build_task_instance_service",
         lambda db: Service(),
@@ -102,7 +94,8 @@ def test_scheduler_logs_committed_counts_with_cqrs_request_id(
     assert success.request_id == cqrs.request_id
     assert success.processed_count == 3
     assert success.created_count == 0
-    assert success.target_date == "2026-10-07"
+    assert success.target_date is None
+    assert success.date_mode == 'player_timezone'
     assert session.commits == 1
     assert session.closed
     assert get_request_id() is None
@@ -326,13 +319,8 @@ def test_scheduler_failure_rolls_back_flushed_rows_and_logs(
     def fail_commit():
         raise RuntimeError("failure during commit")
 
-    class FailureDateTime:
-        @classmethod
-        def now(cls, timezone):
-            return datetime(2035, 2, 10, tzinfo=timezone)
-
     monkeypatch.setattr(scheduler_module, "SessionLocal", lambda: db)
-    monkeypatch.setattr(scheduler_module, "datetime", FailureDateTime)
+    monkeypatch.setattr('app.shared.dates.utc_now', lambda: datetime(2035, 2, 10, tzinfo=timezone.utc))
     if failure_stage == "insert":
         monkeypatch.setattr(TaskInstanceRepository, "create", fail_after_flush)
     else:
@@ -346,7 +334,8 @@ def test_scheduler_failure_rolls_back_flushed_rows_and_logs(
     failure = next(r for r in caplog.records if r.msg == "scheduler_generation_failed")
     cqrs = next(r for r in caplog.records if r.msg == "cqrs_request_failed")
     assert failure.request_id == cqrs.request_id
-    assert failure.target_date == target_date.isoformat()
+    assert failure.target_date is None
+    assert failure.date_mode == 'player_timezone'
     assert failure.outcome == "failure"
     assert failure.created_count is None
     assert failure.processed_count is None

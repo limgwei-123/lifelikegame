@@ -5,6 +5,8 @@ from app.task_instances.models import (
   TaskInstanceStatus,
 )
 from datetime import date
+from calendar import monthrange
+from app.shared import dates
 from sqlalchemy.exc import IntegrityError
 
 from app.tasks.interfaces import TaskServiceInterface
@@ -48,7 +50,7 @@ class TaskInstanceService:
   def generate_task_instances_for_date(self, target_date):
     return list(self.generate_task_instances_with_summary(target_date).task_instances)
 
-  def generate_task_instances_with_summary(self, target_date: date) -> GenerateTaskInstancesResultDTO:
+  def generate_task_instances_with_summary(self, target_date: date | None) -> GenerateTaskInstancesResultDTO:
     task_schedules = self.task_schedule_service.list_task_schedules_for_generation()
     return self._generate_task_instances_from_schedules(target_date, task_schedules)
 
@@ -60,9 +62,19 @@ class TaskInstanceService:
   def _generate_task_instances_from_schedules(self, target_date, task_schedules):
     created_task_instance = []
     created_count = 0
+    now = dates.utc_now() if target_date is None else None
+    player_days = {}
 
     for task_schedule in task_schedules:
-      if not self._should_generate_for_date(task_schedule, target_date):
+      generation_date = target_date
+      if generation_date is None:
+        if task_schedule.user_id not in player_days:
+          user = self.user_service.get_user_by_id(task_schedule.user_id)
+          if user is None:
+            continue
+          player_days[task_schedule.user_id] = dates.player_today(user.timezone, now=now)
+        generation_date = player_days[task_schedule.user_id]
+      if not self._should_generate_for_date(task_schedule, generation_date):
         continue
 
       try:
@@ -76,7 +88,7 @@ class TaskInstanceService:
       task_instance, was_created = self._create_task_instance_with_status(
         task=task,
         task_schedule=task_schedule,
-        date_instance=target_date
+        date_instance=generation_date
       )
 
       created_task_instance.append(task_instance)
@@ -94,12 +106,12 @@ class TaskInstanceService:
     return self.task_instance_repo.list_by_user_id_and_date(user_id=user_id, date_instance = date_instance)
 
   def list_task_instances_by_month(self, user_id, year: int, month: int):
-
+    if not 1 <= year <= 9999 or not 1 <= month <= 12:
+      raise RequestValidationError([{
+        'field': 'year/month', 'message': 'Provide a valid calendar year and month', 'code': 'invalid_date',
+      }])
     start_date = date(year, month, 1)
-    if month == 12:
-        end_date = date(year + 1, 1, 1)
-    else:
-        end_date = date(year, month + 1, 1)
+    end_date = date(year, month, monthrange(year, month)[1])
 
 
     return self.task_instance_repo.list_by_user_id_between_date(user_id=user_id, start_date=start_date, end_date=end_date)
@@ -124,6 +136,7 @@ class TaskInstanceService:
       raise NotFoundError("Task Instance not found")
 
     task = self.task_service.get_task_by_id(task_id=task_instance.task_id, user_id=user_id)
+    completed_at = self.progress_service.current_time()
 
     was_done = task_instance.status == TaskInstanceStatus.DONE
 
@@ -137,7 +150,7 @@ class TaskInstanceService:
       task_instance.completion_level = None
       task_instance.score_awarded = 0
       updated_instance = self.task_instance_repo.update(task_instance)
-      return self._completion_result(updated_instance, user_id, was_done, False, None)
+      return self._completion_result(updated_instance, user_id, was_done, False, None, completed_at)
 
     scoring_snapshot = task_instance.scoring_snapshot_json or {}
     if completion_level is None and len(scoring_snapshot) == 1:
@@ -164,7 +177,7 @@ class TaskInstanceService:
     )
 
     if delta == 0:
-      return self._completion_result(updated_instance, user_id, was_done, True, None)
+      return self._completion_result(updated_instance, user_id, was_done, True, None, completed_at)
 
     point_ledger_request = CreatePointLedgerRequest(
       delta=delta,
@@ -177,15 +190,16 @@ class TaskInstanceService:
 
     point_ledger = self.point_ledger_service.create_point_ledger(
       user_id=user_id,
-      payload=point_ledger_request
+      payload=point_ledger_request,
+      occurred_at=completed_at,
     )
 
-    return self._completion_result(updated_instance, user_id, was_done, True, point_ledger)
+    return self._completion_result(updated_instance, user_id, was_done, True, point_ledger, completed_at)
 
-  def _completion_result(self, task_instance, user_id, was_done, is_goal_task, point_ledger):
+  def _completion_result(self, task_instance, user_id, was_done, is_goal_task, point_ledger, completed_at):
     if not was_done:
-      self.progress_service.record_completion(user_id, task_instance.id, is_goal_task)
-    progress = self.progress_service.get_progress(user_id)
+      self.progress_service.record_completion(user_id, task_instance.id, is_goal_task, completed_at=completed_at)
+    progress = self.progress_service.get_progress(user_id, as_of=completed_at)
     user = self.user_service.get_user_by_id(user_id=user_id)
     return CompleteTaskInstanceResultDTO(
       task_instance=task_instance, user=user, point_ledger=point_ledger, progress=progress,

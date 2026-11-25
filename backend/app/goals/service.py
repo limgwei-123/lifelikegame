@@ -2,16 +2,24 @@ from app.goals.repository import GoalRepository
 from app.goals.schemas import CreateGoalRequest,UpdateGoalRequest
 from app.errors.exception import NotFoundError
 from app.goals.models import Goal
+from app.users.interfaces import UserServiceInterface
+from app.shared.dates import player_today
 
 class GoalService:
-  def __init__(self, goal_repo: GoalRepository):
+  def __init__(self, goal_repo: GoalRepository, user_service: UserServiceInterface):
     self.goal_repo = goal_repo
+    self.user_service = user_service
 
   def create_goal(self,user_id, payload:CreateGoalRequest):
-
+    start_date = payload.start_date
+    if start_date is None:
+      user = self.user_service.get_user_by_id(user_id)
+      if user is None:
+        raise NotFoundError('User not found')
+      start_date = player_today(user.timezone)
     goal = Goal(
       title=payload.title,
-      start_date=payload.start_date,
+      start_date=start_date,
       target_date=payload.target_date,
       current_value=payload.current_value,
       target_value=payload.target_value,

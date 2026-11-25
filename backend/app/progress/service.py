@@ -1,8 +1,7 @@
 from datetime import datetime, timedelta, timezone
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+from app.shared import dates
 
-from app.core.config import get_settings
-from app.errors.exception import NotFoundError, RequestValidationError
+from app.errors.exception import NotFoundError
 from app.progress.models import TaskCompletion
 from app.progress.repository import ProgressRepository
 from app.progress.schemas import BossRosterEntry, BossState, ProgressResponse
@@ -17,7 +16,7 @@ BOSSES = (
 
 
 def utc_now():
-    return datetime.now(timezone.utc)
+    return dates.utc_now()
 
 
 def boss_progress(total_damage):
@@ -61,24 +60,18 @@ class ProgressService:
         self.users = users
         self.clock = clock or utc_now
 
-    def _now(self):
-        now = self.clock()
+    def current_time(self, at: datetime | None = None) -> datetime:
+        now = at if at is not None else self.clock()
         if now.tzinfo is None or now.utcoffset() is None:
             raise ValueError('Progress clock must be timezone-aware')
         return now.astimezone(timezone.utc)
 
     @staticmethod
     def _zone(user):
-        name = user.timezone or get_settings().timezone
-        try:
-            return name, ZoneInfo(name)
-        except (ZoneInfoNotFoundError, ValueError) as error:
-            raise RequestValidationError([{
-                'field': 'timezone', 'message': 'User timezone must be a valid IANA timezone',
-                'code': 'invalid_timezone',
-            }]) from error
+        zone = dates.player_zone(user.timezone)
+        return zone.key, zone
 
-    def record_completion(self, user_id, task_instance_id, is_goal_task):
+    def record_completion(self, user_id, task_instance_id, is_goal_task, *, completed_at: datetime | None = None):
         # Instance locking is owned by TaskInstanceService. This second lock
         # serializes distinct-instance completions for one user, not all players.
         user = self.users.get_by_id_for_update(user_id)
@@ -87,19 +80,19 @@ class ProgressService:
         if self.repository.get_completion(user_id, task_instance_id) is not None:
             return
         zone_name, zone = self._zone(user)
-        now = self._now()
+        now = self.current_time(completed_at)
         self.repository.add(TaskCompletion(
             user_id=user_id, task_instance_id=task_instance_id,
             completed_at=now, completed_local_date=now.astimezone(zone).date(),
             timezone=zone_name, is_goal_task=is_goal_task,
         ))
 
-    def get_progress(self, user_id):
+    def get_progress(self, user_id, *, as_of: datetime | None = None):
         user = self.users.get_by_id(user_id)
         if user is None:
             raise NotFoundError('User not found')
         zone_name, zone = self._zone(user)
-        today = self._now().astimezone(zone).date()
+        today = self.current_time(as_of).astimezone(zone).date()
         days = self.repository.daily_counts(user_id)
         total = sum(row.completed_count for row in days)
         damage = sum(row.damage for row in days)

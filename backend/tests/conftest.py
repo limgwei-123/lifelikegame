@@ -27,6 +27,13 @@ TestingSessionLocal = sessionmaker(
 )
 
 
+@pytest.fixture(autouse=True)
+def disable_background_scheduler(monkeypatch):
+    # Scheduler jobs are exercised explicitly with controlled clocks/sessions.
+    # Never race real startup jobs against HTTP fixtures in the shared test DB.
+    monkeypatch.setattr('app.scheduler.SCHEDULER_ENABLED', False)
+
+
 @pytest.fixture(scope="session", autouse=True)
 def create_tables():
    Base.metadata.create_all(bind=test_engine)

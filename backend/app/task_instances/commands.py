@@ -14,4 +14,5 @@ class CompleteTaskInstanceCommand(TransactionalCommand):
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class GenerateDailyTaskInstancesCommand(TransactionalCommand):
-  target_date: date
+  # None resolves each player's local today; explicit dates retain their meaning.
+  target_date: date | None = None

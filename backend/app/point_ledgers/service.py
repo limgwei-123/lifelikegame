@@ -5,14 +5,15 @@ from app.point_ledgers.dtos import PointsReconciliationDTO
 from app.users.interfaces import UserServiceInterface
 from app.errors.exception import NotFoundError
 
-from datetime import date
+from app.shared.dates import player_today
+from datetime import datetime
 
 class PointLedgerService:
   def __init__(self, point_ledger_repo: PointLedgerRepository, user_service: UserServiceInterface):
     self.point_ledger_repo = point_ledger_repo
     self.user_service = user_service
 
-  def create_point_ledger(self, user_id, payload: CreatePointLedgerRequest):
+  def create_point_ledger(self, user_id, payload: CreatePointLedgerRequest, *, occurred_at: datetime | None = None):
 
     user = self.user_service.get_user_by_id_for_update(user_id=user_id)
     if not user:
@@ -25,7 +26,7 @@ class PointLedgerService:
        source_id=payload.source_id,
        description=payload.description,
        user_id=user_id,
-       event_at=date.today()
+       event_at=player_today(user.timezone, now=occurred_at)
     )
 
     # The caller's UoW commits both writes together; workflows must not add delta again.

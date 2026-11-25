@@ -8,7 +8,10 @@ from app.workflows.task_workflow.dtos import CreateTaskWithScheduleDTO, TaskWith
 from app.workflows.task_workflow.schemas import TaskWithScheduleResponse,GoalTaskSchduleResponse
 from app.ai_planner.draft_schemas import DraftPlan
 
-from app.shared.function import generate_task_instances_for_today
+from dataclasses import replace
+from app.users.interfaces import UserServiceInterface
+from app.shared.dates import player_today
+from app.errors.exception import NotFoundError
 from app.workflows.task_workflow.mappers import map_plan_to_goal_request,map_plan_to_task_with_schedule_requests
 
 class TaskWorkflowService:
@@ -17,14 +20,25 @@ class TaskWorkflowService:
                task_service: TaskServiceInterface,
                task_schedule_service: TaskScheduleServiceInterface,
                task_instance_service: TaskInstanceServiceInterface,
-               scoring_scheme_service: ScoringSchemeServiceInterface):
+               scoring_scheme_service: ScoringSchemeServiceInterface, user_service: UserServiceInterface):
     self.goal_service = goal_service
     self.task_service = task_service
     self.task_schedule_service = task_schedule_service
     self.task_instance_service = task_instance_service
     self.scoring_scheme_service = scoring_scheme_service
+    self.user_service = user_service
+
+  def _today(self, user_id):
+    user = self.user_service.get_user_by_id(user_id)
+    if user is None:
+      raise NotFoundError('User not found')
+    return player_today(user.timezone)
 
   def create_task_with_schedule(self, goal_id, user_id, payload: CreateTaskWithScheduleDTO):
+    today = self._today(user_id) if payload.schedule else None
+    return self._create_task_with_schedule(goal_id, user_id, payload, today)
+
+  def _create_task_with_schedule(self, goal_id, user_id, payload, today):
 
     task = self.task_service.create_task(
       goal_id=goal_id,
@@ -35,10 +49,13 @@ class TaskWorkflowService:
     schedule = None
     task_instance = None
     if payload.schedule:
+      schedule_payload = payload.schedule
+      if schedule_payload.start_date is None:
+        schedule_payload = replace(schedule_payload, start_date=today)
       schedule = self.task_schedule_service.create_task_schedule(
         task_id= task.id,
         user_id=user_id,
-        payload=payload.schedule
+        payload=schedule_payload
       )
 
       if payload.schedule.schedule_type == "once":
@@ -49,7 +66,7 @@ class TaskWorkflowService:
           date_instance=schedule.start_date
         )
 
-      generate_task_instances_for_today(task_instance_service=self.task_instance_service, user_id=user_id)
+      self.task_instance_service.generate_task_instances_for_user(today, user_id)
 
       task.schedule = schedule
 
@@ -62,19 +79,21 @@ class TaskWorkflowService:
   def create_from_ai_plan(self, user_id, plan:DraftPlan)->GoalTaskSchduleResponse:
 
 
-    goal_request = map_plan_to_goal_request(plan)
+    today = self._today(user_id)
+    goal_request = map_plan_to_goal_request(plan, today)
 
     goal = self.goal_service.create_goal(user_id=user_id, payload=goal_request)
 
-    task_with_schedule_requests = map_plan_to_task_with_schedule_requests(plan)
+    task_with_schedule_requests = map_plan_to_task_with_schedule_requests(plan, today)
 
     task_with_schedule_list=[]
 
     for task_payload in task_with_schedule_requests:
-      task_schedule_result = self.create_task_with_schedule(
+      task_schedule_result = self._create_task_with_schedule(
           goal_id=goal.id,
           user_id=user_id,
           payload=task_payload,
+          today=today,
       )
 
       task_with_schedule_list.append(TaskWithScheduleResponse.model_validate(
@@ -82,7 +101,7 @@ class TaskWorkflowService:
         from_attributes=True,
       ))
 
-    generate_task_instances_for_today(task_instance_service=self.task_instance_service, user_id=user_id)
+    self.task_instance_service.generate_task_instances_for_user(today, user_id)
 
     return GoalTaskSchduleResponse(
       goal=goal,
