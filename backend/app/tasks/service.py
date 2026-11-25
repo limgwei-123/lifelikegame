@@ -54,8 +54,14 @@ class TaskService:
       raise NotFoundError("Task not found")
     return task
 
+  def get_task_by_id_for_update(self, task_id, user_id):
+    task = self.task_repo.get_by_id_and_user_id_for_update(task_id, user_id)
+    if task is None:
+      raise NotFoundError('Task not found')
+    return task
+
   def update_task(self, task_id, user_id, data: UpdateTaskDTO):
-    task = self.get_task_by_id(task_id=task_id, user_id=user_id)
+    task = self.get_task_by_id_for_update(task_id=task_id, user_id=user_id)
 
     if task.goal_id is None:
       self._validate_unscored(data.changes.get("scoring_scheme_id"), data.changes.get("scoring_scheme_json"))
@@ -76,7 +82,7 @@ class TaskService:
     )
 
   def delete_task(self, task_id, user_id):
-    task = self.get_task_by_id(task_id=task_id, user_id=user_id)
+    task = self.get_task_by_id_for_update(task_id=task_id, user_id=user_id)
 
     self.task_repo.delete(task)
 

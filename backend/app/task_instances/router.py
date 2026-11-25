@@ -12,6 +12,13 @@ from datetime import date
 
 router = APIRouter(tags=["task_instances"])
 
+
+@router.get('/task_instances/pending', response_model=list[TaskInstanceResponse])
+def list_pending_tasks(date_instance: date | None = Query(None, alias='date'),
+                       current_user=Depends(get_current_user),
+                       task_instance_service: TaskInstanceServiceInterface = Depends(get_task_instance_service)):
+  return task_instance_service.list_pending_task_instances(current_user.id, date_instance)
+
 @router.get("/task_instances", response_model=list[TaskInstanceResponse], status_code=status.HTTP_200_OK)
 def list_task_instance_by_date(
   date_instance: date = Query(..., alias="date"),

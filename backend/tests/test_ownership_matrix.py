@@ -92,6 +92,11 @@ def test_nested_and_workflow_ownership_matrix(client, db, ownership_case, actor,
     case = ownership_case
     ids = ids_for(case)
     scheme_id = case[actor if actor != "anonymous" else "owner"]["rows"]["scoring_schemes"].id
+    if action == 'create_instance':
+        # Initial creation is allowed; adding a second pending occurrence is
+        # covered separately by the recurring-task conflict tests.
+        db.query(TaskInstance).filter(TaskInstance.id == ids['task_instances']).delete(synchronize_session=False)
+        db.commit()
     task_payload = {"title": "New task", "scoring_scheme_id": scheme_id}
     requests = {
         "list_tasks": ("GET", f"/goals/{ids['goals']}/tasks", None, 200),
@@ -380,7 +385,7 @@ def test_repeated_user_scoped_generation_returns_same_owned_instance(client, db,
     assert len(first.json()) == len(second.json()) == 1
     assert first.json()[0]["id"] == second.json()[0]["id"]
     assert first.json()[0]["user_id"] == str(case["owner"]["user"].id)
+    assert first.json()[0]['id'] == ids_for(case)['task_instances']
     assert db.query(TaskInstance).filter(
         TaskInstance.task_id == ids_for(case)["tasks"],
-        TaskInstance.date_instance == date(2045, 5, 16),
     ).count() == 1

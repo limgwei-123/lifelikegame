@@ -60,6 +60,8 @@ def test_new_goal_workflow_and_ledger_use_players_day(client, db, ownership_case
     clock(monkeypatch, instant)
     actor = ownership_case['owner']
     set_zone(db, actor, zone)
+    actor['rows']['task_instances'].date_instance = date.fromisoformat(expected)
+    db.commit()
     goal = client.post('/goals', headers=actor['headers'], json={'title': 'Local goal'})
     assert goal.status_code == 201, goal.text
     assert goal.json()['start_date'] == expected
@@ -112,12 +114,14 @@ def test_scheduled_pass_generates_each_players_today_without_duplicates(db, owne
     owner, other = ownership_case['owner'], ownership_case['other']
     set_zone(db, owner, 'Asia/Kuala_Lumpur')
     set_zone(db, other, 'America/Los_Angeles')
+    player_ids = {owner['user'].id, other['user'].id}
+    db.query(TaskInstance).filter(TaskInstance.user_id.in_(player_ids)).delete(synchronize_session=False)
+    db.commit()
     mediator = build_generate_task_instances_mediator(db)
     command = GenerateDailyTaskInstancesCommand(target_date=None)
     first = mediator.send(command)
     # The batch also processes schedules from other tests in a full-suite run.
     # Assert precisely on this fixture's players rather than global DB counts.
-    player_ids = {owner['user'].id, other['user'].id}
     assert first.created_count >= 2
     assert {(str(row.user_id), row.date_instance) for row in first.task_instances if row.user_id in player_ids} == {
         (str(owner['user'].id), date(2027, 1, 1)), (str(other['user'].id), date(2026, 12, 31)),

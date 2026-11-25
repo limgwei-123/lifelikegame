@@ -29,6 +29,9 @@ class TaskInstanceServiceInterface(Protocol):
   def list_task_instances_by_date(self, user_id: uuid.UUID, date_instance: date) -> list[TaskInstance]:
     ...
 
+  def list_pending_task_instances(self, user_id: uuid.UUID, date_instance: date | None = None) -> list[TaskInstance]:
+    ...
+
   def complete_task_instance(
       self,
       task_instance_id: int,

@@ -13,6 +13,7 @@ class CompleteTaskInstanceResultDTO:
   user: User
   point_ledger: PointLedger | None
   progress: ProgressResponse | None = None
+  next_task_instance: TaskInstance | None = None
 
 
 @dataclass(frozen=True, slots=True)

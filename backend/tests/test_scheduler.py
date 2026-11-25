@@ -113,7 +113,7 @@ def test_generation_summary_counts_only_new_rows(db, task_schedule):
     assert len(second.task_instances) == len(first.task_instances)
 
 
-def test_concurrent_generation_rolls_back_conflict_and_retries_without_duplicates(db, task_schedule, monkeypatch):
+def test_concurrent_generation_serializes_and_retries_without_duplicates(db, task_schedule):
     bind = db.get_bind()
     task_id = task_schedule["task_id"]
     target_date = date(2049, 6, 10)
@@ -126,28 +126,16 @@ def test_concurrent_generation_rolls_back_conflict_and_retries_without_duplicate
     db.commit()
     existing_ids = {row.id for row in db.query(TaskInstance).filter(TaskInstance.date_instance == target_date)}
     db.rollback()
-    ready_to_insert = Barrier(2)
-    original_lookup = TaskInstanceRepository.get_by_task_id_and_date_instance
-
-    def synchronize_missing_lookup(repo, task_id, date_instance):
-        instance = original_lookup(repo, task_id, date_instance)
-        if task_id == task_schedule["task_id"] and date_instance == target_date and instance is None:
-            ready_to_insert.wait(timeout=10)
-        return instance
-
-    monkeypatch.setattr(TaskInstanceRepository, "get_by_task_id_and_date_instance", synchronize_missing_lookup)
+    ready_to_generate = Barrier(2)
 
     def generate():
         with Session(bind) as session:
             session.execute(text("SET LOCAL lock_timeout = '15s'"))
             session.execute(text("SET LOCAL statement_timeout = '20s'"))
             mediator = build_generate_task_instances_mediator(session)
-            try:
-                result = mediator.send(command)
-                outcome = ("created", result.created_count)
-            except ConflictError as error:
-                assert error.code == "CONFLICT"
-                outcome = ("conflict", 0)
+            ready_to_generate.wait(timeout=10)
+            result = mediator.send(command)
+            outcome = ("created", result.created_count)
             assert not session.in_transaction()
             assert session.is_active
             assert mediator.send(command).created_count == 0
@@ -156,7 +144,7 @@ def test_concurrent_generation_rolls_back_conflict_and_retries_without_duplicate
     with ThreadPoolExecutor(max_workers=2) as pool:
         futures = [pool.submit(generate) for _ in range(2)]
         outcomes = [future.result(timeout=25) for future in futures]
-    assert sorted(outcomes) == [("conflict", 0), ("created", 1)]
+    assert sorted(outcomes) == [("created", 0), ("created", 1)]
     with Session(bind) as reader:
         rows = reader.query(TaskInstance).filter(TaskInstance.date_instance == target_date).all()
         created = [row for row in rows if row.id not in existing_ids]
@@ -198,12 +186,13 @@ def test_inactive_task_stays_manageable_and_generation_resumes_without_duplicate
     enabled = mediator.send(command)
     instance = next(row for row in enabled.task_instances if row.task_id == task["id"])
     assert enabled.processed_count == disabled.processed_count + 1
-    assert enabled.created_count == 1
+    assert enabled.created_count == 0
+    assert instance.id == task_instance['id']
     repeated = mediator.send(command)
     assert repeated.created_count == 0
     assert next(row.id for row in repeated.task_instances if row.task_id == task["id"]) == instance.id
     assert db.query(TaskInstance).filter(
-        TaskInstance.task_id == task["id"], TaskInstance.date_instance == command.target_date,
+        TaskInstance.task_id == task["id"],
     ).count() == 1
 
 
@@ -277,7 +266,7 @@ def test_generation_date_range_is_inclusive(
      [date(2026, 10, 31), date(2026, 12, 31), date(2027, 1, 1), date(2027, 1, 31), date(2027, 3, 31)],
      [date(2026, 12, 31), date(2027, 1, 31)]),
 ])
-def test_generation_persists_only_eligible_dates_across_year_boundary(
+def test_generation_keeps_one_pending_occurrence_across_year_boundary(
     client, auth_headers, db, task, task_schedule,
     schedule_type, value, end_date, dates, expected_dates,
 ):
@@ -291,18 +280,15 @@ def test_generation_persists_only_eligible_dates_across_year_boundary(
     for target_date in dates:
         result = mediator.send(GenerateDailyTaskInstancesCommand(target_date=target_date))
         instances = [row for row in result.task_instances if row.task_id == task["id"]]
-        if target_date in expected_dates:
-            assert len(instances) == 1
-            assert instances[0].date_instance == target_date
-        else:
-            assert instances == []
+        assert len(instances) == 1
+        assert instances[0].date_instance == expected_dates[0]
 
     repeated = mediator.send(GenerateDailyTaskInstancesCommand(target_date=expected_dates[-1]))
     assert repeated.created_count == 0
     stored_dates = [row.date_instance for row in db.query(TaskInstance).filter(
         TaskInstance.task_id == task["id"],
     ).order_by(TaskInstance.date_instance).all()]
-    assert stored_dates == expected_dates
+    assert stored_dates == expected_dates[:1]
 
 
 @pytest.mark.parametrize("failure_stage", ["insert", "commit"])

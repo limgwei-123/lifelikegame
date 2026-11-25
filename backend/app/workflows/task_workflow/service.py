@@ -66,7 +66,9 @@ class TaskWorkflowService:
           date_instance=schedule.start_date
         )
 
-      self.task_instance_service.generate_task_instances_for_user(today, user_id)
+      generated = self.task_instance_service.generate_task_instances_for_user(today, user_id)
+      if payload.schedule.schedule_type != 'once':
+        task_instance = next((row for row in generated if row.task_id == task.id), None)
 
       task.schedule = schedule
 

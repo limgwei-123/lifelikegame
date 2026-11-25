@@ -16,7 +16,7 @@ class TaskScheduleService:
 
 
   def create_task_schedule(self, task_id, user_id, payload: CreateTaskScheduleDTO):
-    task = self.task_service.get_task_by_id(task_id=task_id, user_id=user_id)
+    task = self.task_service.get_task_by_id_for_update(task_id=task_id, user_id=user_id)
 
     start_date = payload.start_date if payload.start_date is not None else player_today(task.user.timezone)
     self._validate_date_range(start_date, payload.end_date)
@@ -58,6 +58,8 @@ class TaskScheduleService:
 
   def update_task_schedule(self, task_schedule_id, user_id, data: UpdateTaskScheduleRequest):
     task_schedule = self.get_task_schedule_by_id(task_schedule_id=task_schedule_id, user_id=user_id)
+    self.task_service.get_task_by_id_for_update(task_schedule.task_id, user_id)
+    task_schedule = self.get_task_schedule_by_id(task_schedule_id, user_id)
     update_task_schedule = data.model_dump(exclude_unset=True)
 
     self._validate_date_range(
@@ -79,6 +81,8 @@ class TaskScheduleService:
 
   def delete_task_schedule(self, task_schedule_id, user_id):
     task_schedule = self.get_task_schedule_by_id(task_schedule_id=task_schedule_id, user_id=user_id)
+    self.task_service.get_task_by_id_for_update(task_schedule.task_id, user_id)
+    task_schedule = self.get_task_schedule_by_id(task_schedule_id, user_id)
 
     self.task_schedule_repo.delete(task_schedule)
 

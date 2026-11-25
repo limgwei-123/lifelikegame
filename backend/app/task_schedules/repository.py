@@ -36,7 +36,7 @@ class TaskScheduleRepository:
     )
 
   def list_by_task_id(self, task_id):
-    return self._query().filter(TaskSchedule.task_id == task_id).order_by(TaskSchedule.created_at.asc()).all()
+    return self._query().filter(TaskSchedule.task_id == task_id).order_by(TaskSchedule.created_at.asc()).populate_existing().all()
 
   def list_by_user_id(self, user_id):
     return self._query().filter(TaskSchedule.user_id == user_id).order_by(TaskSchedule.created_at.asc()).all()
@@ -45,7 +45,7 @@ class TaskScheduleRepository:
     return self._query().filter(TaskSchedule.id == task_schedule_id).first()
 
   def get_by_id_and_user_id(self, task_schedule_id, user_id):
-    return self._query().filter(TaskSchedule.id == task_schedule_id, TaskSchedule.user_id == user_id).first()
+    return self._query().filter(TaskSchedule.id == task_schedule_id, TaskSchedule.user_id == user_id).populate_existing().first()
 
   def update(self, task_schedule: TaskSchedule) -> TaskSchedule:
     self.db.flush()

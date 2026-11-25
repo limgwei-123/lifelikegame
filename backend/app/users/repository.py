@@ -27,7 +27,10 @@ class UserRepository:
         return self.db.execute(
             select(User)
             .where(User.id == user_id, User.deleted_at.is_(None))
-            .with_for_update()
+            # Account writes do not change user keys. NO KEY UPDATE still
+            # serializes balances/profile/passwords, while allowing FK checks
+            # from task generation and avoiding a Task/User lock cycle.
+            .with_for_update(key_share=True)
             .execution_options(populate_existing=True)
         ).scalar_one_or_none()
 

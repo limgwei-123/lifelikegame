@@ -16,6 +16,9 @@ class TaskServiceInterface(Protocol):
   def get_task_by_id(self, task_id: int, user_id: uuid.UUID) -> Task:
     ...
 
+  def get_task_by_id_for_update(self, task_id: int, user_id: uuid.UUID) -> Task:
+    ...
+
   def update_task(self, task_id: int, user_id: uuid.UUID, data: UpdateTaskDTO) -> Task:
     ...
 

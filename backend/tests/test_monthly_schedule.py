@@ -39,7 +39,7 @@ def test_monthly_policy_skips_missing_days_without_catch_up(db, day, target_date
     assert service._should_generate_for_date(schedule, target_date) is expected
 
 
-def test_monthly_generation_skips_short_month_and_resumes_on_exact_date(
+def test_monthly_generation_prepares_next_valid_date_without_stacking(
     client, auth_headers, db, task, task_schedule,
 ):
     response = client.post(
@@ -51,11 +51,12 @@ def test_monthly_generation_skips_short_month_and_resumes_on_exact_date(
     mediator = build_generate_task_instances_mediator(db)
     for target_date in (date(2031, 2, 28), date(2031, 4, 30), date(2031, 5, 1)):
         result = mediator.send(GenerateDailyTaskInstancesCommand(target_date=target_date))
-        assert task["id"] not in {row.task_id for row in result.task_instances}
+        instance = next(row for row in result.task_instances if row.task_id == task['id'])
+        assert instance.date_instance == date(2031, 3, 31)
     command = GenerateDailyTaskInstancesCommand(target_date=date(2031, 5, 31))
     result = mediator.send(command)
     instance = next(row for row in result.task_instances if row.task_id == task["id"])
-    assert instance.date_instance == date(2031, 5, 31)
+    assert instance.date_instance == date(2031, 3, 31)
     mediator.send(command)
     assert db.query(TaskInstance).filter(TaskInstance.task_id == task["id"]).count() == 1
 

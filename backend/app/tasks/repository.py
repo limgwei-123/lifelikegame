@@ -35,6 +35,9 @@ class TaskRepository:
   def get_by_id_and_user_id(self, task_id, user_id):
     return self._query().filter(Task.id == task_id, Task.user_id == user_id).first()
 
+  def get_by_id_and_user_id_for_update(self, task_id, user_id):
+    return self._query().filter(Task.id == task_id, Task.user_id == user_id).populate_existing().with_for_update().first()
+
   def update(self, task: Task) -> Task:
     self.db.flush()
     self.db.refresh(task)
