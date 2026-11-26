@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "Lifelikegame",
+    "slug": "lifelikegame",
+    "scheme": "lifelikegame",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "name": "Lifelikegame",
+      "lang": "zh-CN"
+    },
+    "android": {
+      "package": "com.lifelikegame.app"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-status-bar",
+      "expo-font"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

@@ -1,0 +1,11 @@
+node_modules/
+.npm-cache/
+.expo/
+dist/
+dist-android/
+.env.local
+.env.*.local
+expo-env.d.ts
+*.tsbuildinfo
+test-results/
+playwright-report/
