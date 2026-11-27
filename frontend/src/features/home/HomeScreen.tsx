@@ -1,4 +1,4 @@
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import type { Task, TaskInstance, TaskSchedule } from '../../api/tasks';
@@ -12,11 +12,12 @@ import { TaskCard } from '../tasks/TaskCard';
 import { addDays, weekday, weekNames } from '../tasks/dates';
 import { completionLevels, visibleInstances } from '../tasks/model';
 import { useHome } from './HomeProvider';
+import { BossCard } from '../adventure/BossCard';
 
 type Editor = { task?: Task; schedule?: TaskSchedule; scheduleOnly?: boolean };
 export function HomeScreen() {
   const { colors } = useTheme();
-  const { data, selectedDate, loading, busy, error, notice, controller } = useHome();
+  const { data, feedback, selectedDate, loading, busy, error, notice, controller } = useHome();
   const [editor, setEditor] = useState<Editor | null>(null);
   const [menu, setMenu] = useState<Task | null>(null);
   const [deleting, setDeleting] = useState<Task | null>(null);
@@ -93,6 +94,7 @@ export function HomeScreen() {
         </View>
       </Card>
     </>}
+    {data && <BossCard progress={data.progress} feedback={feedback} compact onPress={() => router.navigate('/adventure')} />}
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
       <Text style={{ fontSize: 18, color: colors.text, fontWeight: '800' }}>任务清单</Text>
       <Pressable accessibilityRole="button" accessibilityLabel="刷新任务" disabled={locked} onPress={() => { void controller.refresh(true); }} style={{ padding: 12 }}><Icon name="refresh-cw" size={17} color={colors.muted} /></Pressable>

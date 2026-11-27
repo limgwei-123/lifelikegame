@@ -1,7 +1,8 @@
 import { createContext, useContext, useEffect, useState, useSyncExternalStore, type PropsWithChildren } from 'react';
-import { AppState, Platform } from 'react-native';
+import { AppState, Platform, View } from 'react-native';
 import { useSession } from '../../session/SessionProvider';
 import { HomeController } from './controller';
+import { CompletionToast } from '../adventure/CompletionToast';
 
 const HomeContext = createContext<HomeController | null>(null);
 export function HomeProvider({ children }: PropsWithChildren) {
@@ -19,7 +20,11 @@ export function HomeProvider({ children }: PropsWithChildren) {
       controller.stop();
     };
   }, [controller]);
-  return <HomeContext.Provider value={controller}>{children}</HomeContext.Provider>;
+  return <HomeContext.Provider value={controller}><View style={{ flex: 1 }}>{children}<FeedbackLayer /></View></HomeContext.Provider>;
+}
+function FeedbackLayer() {
+  const { feedback, controller } = useHome();
+  return feedback ? <CompletionToast feedback={feedback} onDismiss={controller.clearFeedback} /> : null;
 }
 export function useHome() {
   const controller = useContext(HomeContext);

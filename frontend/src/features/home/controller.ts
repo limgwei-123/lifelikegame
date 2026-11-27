@@ -3,6 +3,7 @@ import type { Completion, CreatedTask, CreateTaskInput, Goal, Progress, Schedule
 import type { User } from '../../api/types';
 import type { SessionController } from '../../session/controller';
 import { validDate } from '../tasks/dates';
+import { completionFeedback, type AdventureFeedback } from '../adventure/model';
 
 export interface HomeData {
   date: string;
@@ -12,8 +13,9 @@ export interface HomeData {
 export interface HomeSnapshot {
   selectedDate: string | null; data: HomeData | null; loading: boolean; busy: boolean;
   error: string | null; notice: string | null; lastCompletion: Completion | null;
+  feedback: AdventureFeedback | null;
 }
-const initial: HomeSnapshot = { selectedDate: null, data: null, loading: true, busy: false, error: null, notice: null, lastCompletion: null };
+const initial: HomeSnapshot = { selectedDate: null, data: null, loading: true, busy: false, error: null, notice: null, lastCompletion: null, feedback: null };
 const upsert = <T extends { id: number }>(items: T[], item: T) => [...items.filter(x => x.id !== item.id), item];
 
 // One serialized queue owns reads and writes. It is scoped to a single login,
@@ -58,6 +60,9 @@ export class HomeController {
   activate = () => { this.active = true; if (this.abort.signal.aborted) this.abort = new AbortController(); };
   stop = () => { this.active = false; this.epoch++; this.abort.abort(); };
   clearNotice = () => this.publish({ notice: null });
+  clearFeedback = (instanceId: number) => {
+    if (this.state.feedback?.instanceId === instanceId) this.publish({ feedback: null });
+  };
 
   selectDate = (value: string) => {
     if (!validDate(value)) return Promise.resolve();
@@ -94,7 +99,7 @@ export class HomeController {
     this.session.updateUser(user, this.context);
     this.publish({ selectedDate: selected, data: { date: selected, progress, tasks, schedules, goals, schemes, day, pending, month } });
   }
-  private mutate(work: () => Promise<void>, success: string, reload = true): Promise<boolean> {
+  private mutate(work: () => Promise<void>, success: string | null, reload = true): Promise<boolean> {
     if (!this.live() || this.state.busy || this.state.loading) return Promise.resolve(false);
     this.publish({ busy: true, error: null, notice: null });
     return this.serial(async () => {
@@ -164,10 +169,11 @@ export class HomeController {
         return updated;
       };
       const progress = result.progress ?? await this.request<Progress>('/progress');
-      this.publish({ lastCompletion: result, data: { ...current, progress,
+      const goalTask = current.tasks.find(t => t.id === instance.task_id)?.goal_id != null;
+      this.publish({ lastCompletion: result, feedback: completionFeedback(current.progress, progress, goalTask, result.task_instance.id), data: { ...current, progress,
         day: merge(current.day, i => i.date_instance === this.state.selectedDate),
         month: merge(current.month, i => i.date_instance.slice(0, 7) === this.state.selectedDate?.slice(0, 7)),
         pending: merge(current.pending, i => i.status === 'todo' && i.date_instance <= progress.today) } });
-    }, '已完成', false);
+    }, data.tasks.find(t => t.id === instance.task_id)?.goal_id != null ? null : '已完成', false);
   };
 }

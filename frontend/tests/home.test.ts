@@ -141,3 +141,23 @@ test('future occurrences cannot be completed and failed date loads retain their 
   assert.equal(home.getSnapshot().data?.date, progress.today);
   assert.ok(home.getSnapshot().error);
 });
+
+test('confirmed goal damage emits one feedback event; refresh and old dismissals cannot replay or erase it', async () => {
+  const { home, paths } = await fixture(async path => {
+    if (path === '/tasks') return json([{ ...task, goal_id: 2 }]);
+    if (path.endsWith('/complete')) return json({ task_instance: { ...instance, status: 'done' }, next_task_instance: null,
+      user, point_ledger: null, progress: { ...progress, total_completed: 1, total_damage: 1,
+        boss: { ...progress.boss, hp: 29 } } });
+  });
+  await home.refresh();
+  assert.equal(await home.complete(instance), true);
+  const event = home.getSnapshot().feedback;
+  assert.equal(event?.kind, 'hit');
+  assert.equal(event?.instanceId, instance.id);
+  assert.equal(await home.complete(instance), false);
+  assert.equal(home.getSnapshot().feedback, event);
+  home.clearFeedback(999); assert.equal(home.getSnapshot().feedback, event);
+  home.clearFeedback(instance.id); assert.equal(home.getSnapshot().feedback, null);
+  await home.refresh(); assert.equal(home.getSnapshot().feedback, null);
+  assert.equal(paths.filter(p => p.endsWith('/complete')).length, 1);
+});

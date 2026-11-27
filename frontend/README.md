@@ -1,9 +1,18 @@
 # Lifelikegame frontend
 
 React Native + Expo Router + TypeScript; one codebase for Android and Web.
-Packages 1–2 include email authentication, session handling, shared UI/theme,
-首页 / 冒险 / 我的 navigation, and real homepage task workflows. Boss, account
-settings, management and AI follow packages 3–6 in the approved local plan.
+Packages 1–3 include email authentication, session handling, shared UI/theme,
+首页 / 冒险 / 我的 navigation, real homepage task workflows and boss adventure.
+Account settings, management and AI follow packages 4–6 in the approved local plan.
+
+Adventure displays `/progress` HP, round, position and roster in a full page and
+a compact homepage card. All six original illustrations are bundled under
+`assets/bosses/`, keyed by the backend boss IDs. Goal completions can show a
+single short hit/defeat notification; todos never fabricate damage. Refresh,
+navigation and account changes do not replay awards. Feedback only describes a
+confirmed server transition, and all gameplay mutations remain backend-owned.
+Animations respect Web/native reduced-motion preferences, stop on cleanup and
+run only for completion feedback; there are no idle animation loops.
 
 The homepage uses the server's player date, streak and balance; shows overdue
 pending work today; supports once/daily/weekly/monthly task creation, optional
@@ -106,4 +115,6 @@ simulates only the `/users/me` expired-token response. The task workflow creates
 its own test account/data in that disposable API and covers plain/scored tasks,
 snapshots, daily/weekly/monthly rules, next occurrences, overdue work, editing,
 pause/resume/delete and a simulated failed completion. It never targets the
-existing development database automatically.
+existing development database automatically. The adventure suite additionally
+uses real workflow/completion APIs to finish the first six bosses, verifies the
+second-round slime at 32 HP, and checks reduced motion and account isolation.
