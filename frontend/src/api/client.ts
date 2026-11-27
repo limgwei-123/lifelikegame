@@ -16,10 +16,11 @@ export class ApiError extends Error {
   }
 }
 
-function messageFor(status: number, code: string, authenticated: boolean): string {
+function messageFor(status: number, code: string, authenticated: boolean, path: string): string {
   if (status === 401) return authenticated ? '登录已失效，请重新登录。' : '邮箱或密码不正确。';
   if (status === 403) return '暂时无法执行此操作。';
-  if (status === 409 && code === 'CONFLICT') return '这个邮箱已经注册，请直接登录。';
+  if (status === 409) return path === '/auth/signup' ? '这个邮箱已经注册，请直接登录。' : '资料已变更，请刷新后再试。';
+  if (status === 404) return '这项资料已不存在，请刷新列表。';
   if (status === 422) return '请检查填写的信息后再试。';
   if (status === 429) return '请求过于频繁，请稍后再试。';
   if (status >= 500) return '服务暂时不可用，请稍后重试。';
@@ -69,7 +70,7 @@ export class ApiClient {
           ? data.code : 'REQUEST_FAILED';
         if (response.status === 401 && context) await this.unauthorized(context);
         const retry = Number(response.headers.get('Retry-After'));
-        throw new ApiError(response.status, code, messageFor(response.status, code, !!context),
+        throw new ApiError(response.status, code, messageFor(response.status, code, !!context, path),
           Number.isFinite(retry) && retry > 0 ? retry : undefined);
       }
       return data as T;

@@ -58,3 +58,10 @@ test('network failures and malformed success responses become usable errors', as
     new Response('{invalid', { headers: { 'Content-Type': 'application/json' } }));
   await assert.rejects(broken.request('/health'), error => error instanceof ApiError && error.code === 'INVALID_RESPONSE');
 });
+
+test('task conflicts use task feedback while duplicate signup keeps the email-specific message', async () => {
+  const api = new ApiClient('https://api.example.test', () => ({ token: 'token', revision: 1 }), () => {}, async () =>
+    new Response(JSON.stringify({ code: 'CONFLICT' }), { status: 409 }));
+  await assert.rejects(api.request('/task_instances/1/complete'), error => error instanceof ApiError && !error.message.includes('邮箱') && error.message.includes('刷新'));
+  await assert.rejects(api.request('/auth/signup', { auth: false }), error => error instanceof ApiError && error.message.includes('邮箱'));
+});

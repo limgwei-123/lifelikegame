@@ -1,9 +1,24 @@
 # Lifelikegame frontend
 
 React Native + Expo Router + TypeScript; one codebase for Android and Web.
-Package 1 includes email authentication, session handling, shared UI/theme and
-首页 / 冒险 / 我的 navigation. Task/Boss/management/AI screens follow the approved
-six-package plan in `../docs/superpowers/plans/2026-11-26-universal-frontend.md`.
+Packages 1–2 include email authentication, session handling, shared UI/theme,
+首页 / 冒险 / 我的 navigation, and real homepage task workflows. Boss, account
+settings, management and AI follow packages 3–6 in the approved local plan.
+
+The homepage uses the server's player date, streak and balance; shows overdue
+pending work today; supports once/daily/weekly/monthly task creation, optional
+goals and scoring schemes, snapshot scoring, completion-driven recurrence,
+task edits, pause/resume and deletion. Date/month browsing only reads records.
+Entry/resume may repair current work once per player day; rule changes and
+restoring a paused task explicitly repair it as part of that action. No timer
+or frontend midnight scheduler runs.
+
+Task text and repeating rules are saved separately because the backend exposes
+separate writes. Rule changes apply to subsequent occurrences; existing current
+dates are retained. One-time dates are chosen when creating a task. Deleted task
+completions remain history and display “已删除的任务” because their original title
+is not stored in the occurrence response. A completion's real action date drives
+streaks and today's count; its scheduled date remains the history/calendar date.
 
 ## Start Web
 
@@ -80,10 +95,15 @@ configured in `.env.local` (creates one test account per run):
 ```powershell
 npx playwright install chromium
 $env:E2E_DISPOSABLE_API = '1'
+$env:E2E_API_URL = 'http://localhost:8001'
 npx playwright test
 ```
 
 Set `E2E_BROWSER_CHANNEL=msedge` to use installed Edge instead of downloading
 Chromium. Test results and screenshots are ignored. The suite covers real signup,
 wrong/correct password, three tabs, refresh, logout and protected links; it
-simulates only the `/users/me` expired-token response.
+simulates only the `/users/me` expired-token response. The task workflow creates
+its own test account/data in that disposable API and covers plain/scored tasks,
+snapshots, daily/weekly/monthly rules, next occurrences, overdue work, editing,
+pause/resume/delete and a simulated failed completion. It never targets the
+existing development database automatically.

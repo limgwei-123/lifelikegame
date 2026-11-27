@@ -43,6 +43,9 @@ test('real registration, login, navigation, restore, expiry and logout', async (
   await expect(page.getByRole('tab', { name: '首页' })).toBeVisible();
   // The backend does not expose a test expiry route: simulate that single
   // boundary response, retaining real API calls for the rest of the workflow.
+  // Wait for Home's authenticated bootstrap to finish before installing the
+  // expiry response; otherwise an old page request can expire before reload.
+  await expect(page.getByRole('button', { name: '添加任务', exact: true })).toBeEnabled();
   await page.route('**/users/me', route => route.fulfill({ status: 401, json: { code: 'UNAUTHORIZED' } }));
   await page.reload();
   await expect(page.getByText('登录已失效，请重新登录。')).toBeVisible();

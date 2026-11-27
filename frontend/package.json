@@ -13,7 +13,7 @@
     "build": "expo export --platform web",
     "build:android": "expo export --platform android --output-dir dist-android",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test tests/api.test.ts tests/session.test.ts"
+    "test": "node --import tsx --test tests/*.test.ts"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",

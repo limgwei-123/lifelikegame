@@ -20,6 +20,13 @@ export class SessionController {
   }
 
   getSnapshot = () => this.snapshot;
+  captureAuth = (): AuthContext | null => this.snapshot.status === 'signedIn' && this.token
+    ? { token: this.token, revision: this.revision } : null;
+  isCurrent = (context: AuthContext) => this.snapshot.status === 'signedIn'
+    && context.revision === this.revision && context.token === this.token;
+  updateUser = (user: import('../api/types').User, context: AuthContext) => {
+    if (this.isCurrent(context) && this.snapshot.user?.id === user.id) this.publish({ ...this.snapshot, user });
+  };
   getServerSnapshot = () => initial;
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   private publish(next: SessionSnapshot) { this.snapshot = next; this.listeners.forEach(listener => listener()); }

@@ -4,11 +4,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Brand, Icon, type IconName } from '../../src/components/ui';
 import { useSession } from '../../src/session/SessionProvider';
 import { useTheme } from '../../src/theme/ThemeProvider';
+import { HomeProvider } from '../../src/features/home/HomeProvider';
 
 const destinations: Record<string, { title: string; icon: IconName }> = {
   index: { title: '首页', icon: 'home' }, adventure: { title: '冒险', icon: 'compass' }, me: { title: '我的', icon: 'user' },
 };
 export default function TabLayout() {
+  return <HomeProvider><Navigation /></HomeProvider>;
+}
+function Navigation() {
   const wide = useWindowDimensions().width >= 900;
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -22,7 +26,7 @@ export default function TabLayout() {
         const item = destinations[route.name];
         if (!item) return null;
         const selected = state.index === index;
-        return <Pressable key={route.key} accessibilityRole="tab" accessibilityLabel={item.title} accessibilityState={{ selected }}
+        return <Pressable key={route.key} accessibilityRole="tab" accessibilityLabel={item.title} aria-selected={selected} accessibilityState={{ selected }}
           onPress={() => {
             const event = emitter.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
             if (!selected && !event.defaultPrevented) navigateToTab(route.key);
