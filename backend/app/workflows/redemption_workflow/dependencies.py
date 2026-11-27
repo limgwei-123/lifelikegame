@@ -25,7 +25,7 @@ def build_redemption_workflow_service(db: Session)-> RedemptionWorkflowServiceIn
   )
 
 def get_redemption_workflow_service(
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
 ) -> RedemptionWorkflowServiceInterface:
     return build_redemption_workflow_service(db)
 

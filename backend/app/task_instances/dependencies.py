@@ -33,7 +33,7 @@ def build_task_instance_service(db: Session) -> TaskInstanceServiceInterface:
 
 
 def get_task_instance_service(
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
 )->TaskInstanceServiceInterface:
   return build_task_instance_service(db)
 

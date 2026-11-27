@@ -14,6 +14,6 @@ def build_goal_service(db:Session)->GoalServiceInterface:
   )
 
 def get_goal_service(
-    db:Session = Depends(get_db)
+    db:Session = Depends(get_db, scope="function")
 )->GoalServiceInterface:
   return build_goal_service(db)

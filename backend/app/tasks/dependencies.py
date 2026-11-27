@@ -16,6 +16,6 @@ def build_task_service(db:Session)->TaskServiceInterface:
     )
 
 def get_task_service(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db, scope="function")
 )->TaskServiceInterface:
   return build_task_service(db)

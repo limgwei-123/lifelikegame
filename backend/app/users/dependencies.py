@@ -12,7 +12,7 @@ def build_user_service(db: Session) -> UserServiceInterface:
         user_repo=UserRepository(db),
     )
 
-def get_user_service(db: Session = Depends(get_db))->UserServiceInterface:
+def get_user_service(db: Session = Depends(get_db, scope="function"))->UserServiceInterface:
   return build_user_service(db)
 
 

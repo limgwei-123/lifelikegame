@@ -11,5 +11,5 @@ def build_progress_service(db: Session) -> ProgressService:
     return ProgressService(ProgressRepository(db), UserRepository(db))
 
 
-def get_progress_service(db: Session = Depends(get_db)) -> ProgressService:
+def get_progress_service(db: Session = Depends(get_db, scope="function")) -> ProgressService:
     return build_progress_service(db)

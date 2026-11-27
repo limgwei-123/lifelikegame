@@ -14,6 +14,6 @@ def build_task_schedule_service(db: Session)->TaskScheduleServiceInterface:
   )
 
 def get_task_schedule_service(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db, scope="function")
 )->TaskScheduleServiceInterface:
   return build_task_schedule_service(db)

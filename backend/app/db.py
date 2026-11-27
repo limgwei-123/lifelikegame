@@ -34,5 +34,7 @@ def get_session():
 
 
 def get_db(db: Session = Depends(get_session)):
+  # Consumers use Depends(get_db, scope="function") so the UoW commits before
+  # success headers are sent and a follow-up request reaches another worker.
   with build_unit_of_work(db).begin():
     yield db

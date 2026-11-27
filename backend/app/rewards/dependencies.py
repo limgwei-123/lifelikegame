@@ -12,5 +12,5 @@ def build_reward_service(db: Session)->RewardServiceInterface:
     reward_repo=RewardRepository(db)
   )
 
-def get_reward_service(db:Session = Depends(get_db))->RewardServiceInterface:
+def get_reward_service(db:Session = Depends(get_db, scope="function"))->RewardServiceInterface:
   return build_reward_service(db)

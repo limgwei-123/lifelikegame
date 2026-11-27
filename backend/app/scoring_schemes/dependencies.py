@@ -12,6 +12,6 @@ def build_scoring_scheme_service(db: Session)->ScoringSchemeServiceInterface:
   )
 
 def get_scoring_scheme_service(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db, scope="function")
 )->ScoringSchemeServiceInterface:
   return build_scoring_scheme_service(db)

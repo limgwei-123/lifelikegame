@@ -14,5 +14,5 @@ def build_redemption_service(db:Session)->RedemptionServiceInterface:
     reward_service=build_reward_service(db)
   )
 
-def get_redemption_service(db: Session = Depends(get_db))->RedemptionServiceInterface:
+def get_redemption_service(db: Session = Depends(get_db, scope="function"))->RedemptionServiceInterface:
   return build_redemption_service(db)

@@ -13,5 +13,5 @@ def build_point_ledger_service(db: Session) -> PointLedgerServiceInterface:
         user_service=build_user_service(db),
     )
 
-def get_point_ledger_service(db: Session = Depends(get_db))->PointLedgerServiceInterface:
+def get_point_ledger_service(db: Session = Depends(get_db, scope="function"))->PointLedgerServiceInterface:
   return build_point_ledger_service(db)
