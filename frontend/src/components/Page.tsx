@@ -12,7 +12,7 @@ export function Page({ title, children, footer }: PropsWithChildren<{ title: str
   const insets = useSafeAreaInsets();
   const { user } = useSession();
   const { data } = useHome();
-  return <View style={{ flex: 1, backgroundColor: colors.background }}>
+  return <View testID={`page-${title}`} style={{ flex: 1, backgroundColor: colors.background }}>
     <View style={{ paddingTop: Math.max(20, insets.top + 12), paddingBottom: 20, paddingHorizontal: wide ? 40 : 22,
       flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderColor: colors.border }}>
       {wide ? <Text style={{ fontSize: 17, fontWeight: '700', color: colors.text }}>{title}</Text> : <Brand />}

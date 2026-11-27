@@ -18,7 +18,7 @@ export class ApiError extends Error {
 
 function messageFor(status: number, code: string, authenticated: boolean, path: string): string {
   if (status === 401) return authenticated ? '登录已失效，请重新登录。' : '邮箱或密码不正确。';
-  if (status === 403) return '暂时无法执行此操作。';
+  if (status === 403) return path === '/auth/change-password' ? '当前密码不正确。' : '暂时无法执行此操作。';
   if (status === 409) return path === '/auth/signup' ? '这个邮箱已经注册，请直接登录。' : '资料已变更，请刷新后再试。';
   if (status === 404) return '这项资料已不存在，请刷新列表。';
   if (status === 422) return '请检查填写的信息后再试。';

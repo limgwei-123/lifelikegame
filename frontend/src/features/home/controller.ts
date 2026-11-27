@@ -1,6 +1,8 @@
 import { ApiError, type AuthContext } from '../../api/client';
 import type { Completion, CreatedTask, CreateTaskInput, Goal, Progress, ScheduleInput, ScoringScheme, Task, TaskInstance, TaskSchedule } from '../../api/tasks';
 import type { User } from '../../api/types';
+import { isUser } from '../../api/types';
+import type { ProfileInput } from '../account/model';
 import type { SessionController } from '../../session/controller';
 import { validDate } from '../tasks/dates';
 import { completionFeedback, type AdventureFeedback } from '../adventure/model';
@@ -43,11 +45,11 @@ export class HomeController {
     if (!this.live()) return;
     this.state = { ...this.state, ...change }; this.listeners.forEach(fn => fn());
   }
-  private async request<T>(path: string, body?: unknown): Promise<T> {
+  private async request<T>(path: string, body?: unknown, method?: string): Promise<T> {
     if (!this.live()) throw new ApiError(0, 'CANCELLED', '');
     const signal = this.abort.signal;
     const value = await this.session.api.request<T>(path, { context: this.context, signal,
-      ...(body === undefined ? {} : { method: 'POST', body }) });
+      ...(body === undefined ? {} : { method: method ?? 'POST', body }) });
     if (signal.aborted || !this.live()) throw new ApiError(0, 'CANCELLED', '');
     return value;
   }
@@ -60,6 +62,7 @@ export class HomeController {
   activate = () => { this.active = true; if (this.abort.signal.aborted) this.abort = new AbortController(); };
   stop = () => { this.active = false; this.epoch++; this.abort.abort(); };
   clearNotice = () => this.publish({ notice: null });
+  clearMessages = () => this.publish({ notice: null, error: null });
   clearFeedback = (instanceId: number) => {
     if (this.state.feedback?.instanceId === instanceId) this.publish({ feedback: null });
   };
@@ -119,6 +122,26 @@ export class HomeController {
       } finally { this.publish({ busy: false }); }
     }, false);
   }
+  saveProfile = (input: ProfileInput) => this.mutate(async () => {
+    const previous = this.session.getSnapshot().user;
+    const updated = await this.request<User>('/users/me', input, 'PATCH');
+    if (!isUser(updated) || updated.id !== previous?.id) throw new ApiError(502, 'INVALID_RESPONSE', '无法确认账户资料，请刷新后重试。');
+    this.session.updateUser(updated, this.context);
+    if (previous.timezone !== updated.timezone) await this.repairAfterSave();
+  }, '个人资料已保存');
+  changePassword = (current: string, next: string): Promise<boolean> => {
+    if (!this.live() || this.state.busy || this.state.loading) return Promise.resolve(false);
+    this.publish({ busy: true, error: null, notice: null });
+    return this.serial(async () => {
+      try {
+        // Passwords exist only in this request closure, never in a snapshot/store.
+        await this.request('/auth/change-password', { current_password: current, new_password: next });
+        await this.session.logout('密码已更新，请重新登录。');
+        return this.session.getSnapshot().status === 'signedOut';
+      } catch (error) { this.publish({ error: this.error(error) }); return false; }
+      finally { this.publish({ busy: false }); }
+    }, false);
+  };
   create = (input: CreateTaskInput) => this.mutate(async () => {
     const created = await this.request<CreatedTask>('/workflows/tasks', input);
     if (this.state.data) this.publish({ data: { ...this.state.data,

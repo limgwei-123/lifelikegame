@@ -20,7 +20,8 @@ const json = (value: unknown, status = 200) => new Response(JSON.stringify(value
 function deferred<T>() { let resolve!: (value: T) => void; const promise = new Promise<T>(r => { resolve = r; }); return { resolve, promise }; }
 async function fixture(intercept?: (path: string, init?: RequestInit) => Promise<Response | undefined>) {
   const paths: string[] = [];
-  const session = new SessionController({ read: async () => null, write: async () => {} }, 'https://api.example.test', async (url, init) => {
+  let token: string | null = null;
+  const session = new SessionController({ read: async () => token, write: async value => { token = value; } }, 'https://api.example.test', async (url, init) => {
     const path = new URL(String(url)).pathname + new URL(String(url)).search;
     paths.push(path);
     const custom = await intercept?.(path, init); if (custom) return custom;
@@ -35,7 +36,7 @@ async function fixture(intercept?: (path: string, init?: RequestInit) => Promise
     return json([]);
   });
   await session.signIn(user.email, 'password123');
-  return { session, home: new HomeController(session), paths };
+  return { session, home: new HomeController(session), paths, storedToken: () => token };
 }
 
 test('server today is authoritative and generation runs once per player day, never on date browsing', async () => {
@@ -160,4 +161,73 @@ test('confirmed goal damage emits one feedback event; refresh and old dismissals
   home.clearFeedback(instance.id); assert.equal(home.getSnapshot().feedback, null);
   await home.refresh(); assert.equal(home.getSnapshot().feedback, null);
   assert.equal(paths.filter(p => p.endsWith('/complete')).length, 1);
+});
+
+test('profile save uses PATCH and publishes real returned account; failed save retains prior user', async () => {
+  let saved = user, fail = false;
+  const { home, session } = await fixture(async (path, init) => {
+    if (path !== '/users/me') return;
+    if (init?.method === 'PATCH') {
+      if (fail) return json({}, 422);
+      saved = { ...saved, ...JSON.parse(String(init.body)) }; return json(saved);
+    }
+    return json(saved);
+  });
+  await home.refresh();
+  assert.equal(await home.saveProfile({ display_name: '小勇者', avatar_key: 'book', timezone: user.timezone }), true);
+  assert.equal(session.getSnapshot().user?.display_name, '小勇者');
+  assert.equal(session.getSnapshot().user?.avatar_key, 'book');
+  fail = true;
+  assert.equal(await home.saveProfile({ display_name: '失败的名字', avatar_key: 'sun', timezone: user.timezone }), false);
+  assert.equal(session.getSnapshot().user?.display_name, '小勇者');
+});
+
+test('wrong current password stays signed in; successful password change clears token and session', async () => {
+  let correct = false;
+  const { home, session, storedToken } = await fixture(async path => path === '/auth/change-password'
+    ? correct ? new Response(null, { status: 204 }) : json({ code: 'PERMISSION_DENIED' }, 403) : undefined);
+  await home.refresh();
+  assert.equal(await home.changePassword('wrong-current', 'new-secret'), false);
+  assert.equal(session.getSnapshot().status, 'signedIn');
+  assert.match(home.getSnapshot().error!, /当前密码/);
+  assert.ok(!JSON.stringify(home.getSnapshot()).includes('new-secret'));
+  correct = true;
+  assert.equal(await home.changePassword('correct-current', 'new-secret'), true);
+  assert.equal(storedToken(), null);
+  assert.equal(session.getSnapshot().status, 'signedOut');
+  assert.match(session.getSnapshot().notice!, /密码已更新/);
+});
+
+test('late password-change response cannot log out a replacement session', async () => {
+  const reply = deferred<Response>(), entered = deferred<void>();
+  const { home, session } = await fixture(async path => {
+    if (path === '/auth/change-password') { entered.resolve(); return reply.promise; }
+  });
+  await home.refresh();
+  const changing = home.changePassword('current-secret', 'next-secret'); await entered.promise;
+  await session.logout(); await session.signIn(user.email, 'replacement-secret');
+  reply.resolve(new Response(null, { status: 204 }));
+  assert.equal(await changing, false);
+  assert.equal(session.getSnapshot().status, 'signedIn');
+});
+
+test('timezone save refreshes server today and repairs against that day, never the device date', async () => {
+  let saved = user;
+  const generated: unknown[] = [];
+  const { home } = await fixture(async (path, init) => {
+    if (path === '/users/me') {
+      if (init?.method === 'PATCH') saved = { ...saved, ...JSON.parse(String(init.body)) };
+      return json(saved);
+    }
+    if (path === '/progress') return json({ ...progress, timezone: saved.timezone,
+      today: saved.timezone === 'America/Los_Angeles' ? '2026-11-26' : progress.today });
+    if (path === '/tasks_instances/generate') { generated.push(JSON.parse(String(init?.body))); return json([]); }
+    if (path.startsWith('/task_instances/pending') && saved.timezone === 'America/Los_Angeles') return json([]);
+  });
+  await home.refresh();
+  assert.equal(home.getSnapshot().selectedDate, '2026-11-27');
+  await home.saveProfile({ display_name: null, avatar_key: 'leaf', timezone: 'America/Los_Angeles' });
+  assert.equal(home.getSnapshot().selectedDate, '2026-11-26');
+  assert.equal(home.getSnapshot().data?.progress.timezone, 'America/Los_Angeles');
+  assert.deepEqual(generated, [{ date_instance: '2026-11-26' }]);
 });

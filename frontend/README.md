@@ -1,9 +1,27 @@
 # Lifelikegame frontend
 
 React Native + Expo Router + TypeScript; one codebase for Android and Web.
-Packages 1–3 include email authentication, session handling, shared UI/theme,
-首页 / 冒险 / 我的 navigation, real homepage task workflows and boss adventure.
-Account settings, management and AI follow packages 4–6 in the approved local plan.
+Packages 1–4 include email authentication, session handling, shared UI/theme,
+首页 / 冒险 / 我的 navigation, real homepage task workflows, boss adventure, and
+account/appearance settings. Management and AI follow packages 5–6 in the local plan.
+
+My opens profile, password and appearance sheets. Nickname, built-in avatar and
+IANA timezone save through `PATCH /users/me`, sharing the serialized authenticated
+queue with task reads/writes to avoid stale profile/balance updates. A timezone
+change refreshes the server's player date/progress. The approved adventurer art
+is reused with small badges for the existing `leaf/tree/sun/book` avatar keys.
+Email is displayed; changing email and Google login remain outside this round.
+
+Password changes call the existing endpoint, clear the local session on success
+and return to login; the backend revokes old credentials. Wrong current passwords
+stay in the form. Passwords are never saved in snapshots, preferences or storage.
+
+Appearance supports light/dark/system and blue/green/purple/orange accents, saved
+per device/browser as `lifelikegame_appearance_v1`. Web uses localStorage; native
+uses a separate SecureStore key. It survives logout and is intentionally shared
+by accounts on that device. Invalid stored formats fall back to system/blue;
+storage failures keep the last saved settings and show a retry message. No new
+backend schema or cross-device theme sync is required.
 
 Adventure displays `/progress` HP, round, position and roster in a full page and
 a compact homepage card. All six original illustrations are bundled under
@@ -118,3 +136,5 @@ pause/resume/delete and a simulated failed completion. It never targets the
 existing development database automatically. The adventure suite additionally
 uses real workflow/completion APIs to finish the first six bosses, verifies the
 second-round slime at 32 HP, and checks reduced motion and account isolation.
+The account suite also verifies profile persistence/validation/failure, timezone
+dates, live system appearance, real browser-storage errors and password revocation.
