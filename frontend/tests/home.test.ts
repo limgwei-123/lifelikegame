@@ -4,6 +4,7 @@ import { SessionController } from '../src/session/controller.ts';
 import { HomeController } from '../src/features/home/controller.ts';
 import type { Progress, TaskInstance, Task } from '../src/api/tasks.ts';
 import type { User } from '../src/api/types.ts';
+import type { Reward } from '../src/api/management.ts';
 
 const user: User = { id: 'player', email: 'player@example.com', current_value: 0,
   display_name: null, avatar_key: 'leaf', timezone: 'Pacific/Kiritimati' };
@@ -28,6 +29,7 @@ async function fixture(intercept?: (path: string, init?: RequestInit) => Promise
     if (path === '/auth/login') return json({ access_token: 'token' });
     if (path === '/users/me') return json(user);
     if (path === '/progress') return json(progress);
+    if (path === '/point_ledgers/balance') return json({ balance: 0 });
     if (path === '/tasks') return json([task]);
     if (path === '/task_schedules') return json([{ id: 1, task_id: 1, schedule_type: 'daily', schedule_value_json: {}, start_date: progress.today, end_date: null }]);
     if (path.startsWith('/task_instances/pending')) return json([instance]);
@@ -230,4 +232,64 @@ test('timezone save refreshes server today and repairs against that day, never t
   assert.equal(home.getSnapshot().selectedDate, '2026-11-26');
   assert.equal(home.getSnapshot().data?.progress.timezone, 'America/Los_Angeles');
   assert.deepEqual(generated, [{ date_instance: '2026-11-26' }]);
+});
+
+const reward: Reward = { id: 9, user_id: user.id, title: '看电影', description: null, cost_points: 3, status: 'available',
+  created_at: '2026-11-27T00:00:00Z', updated_at: '2026-11-27T00:00:00Z' };
+test('resume refresh keeps previously requested management data current', async () => {
+  let changed = false;
+  const { home } = await fixture(async path => path === '/rewards' ? json([{ ...reward, status: changed ? 'redeemed' : 'available' }]) : undefined);
+  await home.refreshManagement(); changed = true; await home.refresh(true);
+  assert.equal(home.getSnapshot().management?.rewards[0].status, 'redeemed');
+});
+
+test('changed reward price requires fresh confirmation without submitting a redemption', async () => {
+  const { home, paths } = await fixture(async path => path === '/rewards' ? json([{ ...reward, cost_points: 8 }]) : undefined);
+  await home.refreshManagement();
+  assert.equal(await home.redeemReward(reward), false);
+  assert.equal(paths.filter(p => p.endsWith('/redeem')).length, 0);
+  assert.match(home.getSnapshot().error!, /已变更/);
+});
+test('redemption is single-flight, never optimistic, and follows the returned remaining balance', async () => {
+  const reply = deferred<Response>(), entered = deferred<void>();
+  let balance = 10, redeemed = false;
+  const { home, session, paths } = await fixture(async path => {
+    if (path === '/users/me') return json({ ...user, current_value: balance });
+    if (path === '/point_ledgers/balance') return json({ balance });
+    if (path === '/rewards') return json([{ ...reward, status: redeemed ? 'redeemed' : 'available' }]);
+    if (path.endsWith('/redeem')) { entered.resolve(); return reply.promise; }
+  });
+  await home.refreshManagement();
+  const redeeming = home.redeemReward(reward); await entered.promise;
+  assert.equal(session.getSnapshot().user?.current_value, 10);
+  assert.equal(await home.redeemReward(reward), false);
+  balance = 7; redeemed = true;
+  reply.resolve(json({ redemption_id: 1, reward_id: 9, reward_title: reward.title, cost_points: 3, remaining_points: 7, redeemed_at: '2026-11-27T00:00:00Z' }));
+  assert.equal(await redeeming, true);
+  assert.equal(session.getSnapshot().user?.current_value, 7);
+  assert.equal(home.getSnapshot().management?.balance, 7);
+  assert.equal(await home.redeemReward(reward), false);
+  assert.equal(paths.filter(p => p.endsWith('/redeem')).length, 1);
+});
+test('failed or late redemption responses cannot deduct points or affect a replacement session', async () => {
+  const reply = deferred<Response>(), entered = deferred<void>();
+  let slow = false;
+  const { home, session } = await fixture(async path => {
+    if (path === '/users/me') return json({ ...user, current_value: 10 });
+    if (path === '/point_ledgers/balance') return json({ balance: 10 });
+    if (path === '/rewards') return json([reward]);
+    if (path.endsWith('/redeem')) {
+      if (!slow) return json({ code: 'CONFLICT', message: 'Not Enough Points' }, 409);
+      entered.resolve(); return reply.promise;
+    }
+  });
+  await home.refreshManagement();
+  assert.equal(await home.redeemReward(reward), false);
+  assert.equal(session.getSnapshot().user?.current_value, 10);
+  assert.match(home.getSnapshot().error!, /积分不足/);
+  slow = true; const redeeming = home.redeemReward(reward); await entered.promise;
+  await session.logout(); await session.signIn(user.email, 'replacement');
+  reply.resolve(json({ redemption_id: 1, reward_id: 9, reward_title: reward.title, cost_points: 3, remaining_points: 7, redeemed_at: '2026-11-27T00:00:00Z' }));
+  assert.equal(await redeeming, false);
+  assert.equal(session.getSnapshot().user?.current_value, 10);
 });

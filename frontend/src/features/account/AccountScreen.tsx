@@ -1,4 +1,4 @@
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Page } from '../../components/Page';
@@ -44,6 +44,20 @@ export function AccountScreen() {
       </View>
     </Card>
     <Message text={error} /><Message text={notice} success />
+    <Card style={{ padding: 0, overflow: 'hidden' }}>
+      {([
+        ['目标', 'flag', '/me/goals'],
+        ['评分方案', 'layers', '/me/scoring'],
+        ['奖励', 'gift', '/me/rewards'],
+        ['积分记录', 'list', '/me/points'],
+      ] as const).map(([title, icon, path], index) => <Pressable key={path} accessibilityRole="button" accessibilityLabel={title}
+        disabled={busy} onPress={() => router.push(path)} style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 13,
+          padding: 20, borderBottomWidth: index === 3 ? 0 : 1, borderColor: colors.border, opacity: pressed || busy ? 0.6 : 1 })}>
+        <View style={{ padding: 11, borderRadius: 13, backgroundColor: colors.accentSoft }}><Icon name={icon} color={colors.accent} size={20} /></View>
+        <Text style={{ flex: 1, color: colors.text, fontSize: 15, fontWeight: '700' }}>{title}</Text>
+        <Icon name="chevron-right" color={colors.muted} size={18} />
+      </Pressable>)}
+    </Card>
     <Card style={{ padding: 0, overflow: 'hidden' }}>
       {row('个人资料', '昵称、头像与时区', 'user', 'profile')}
       {row('修改密码', '账户安全', 'shield', 'password')}

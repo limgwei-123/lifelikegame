@@ -1,5 +1,6 @@
 import { ApiError, type AuthContext } from '../../api/client';
-import type { Completion, CreatedTask, CreateTaskInput, Goal, Progress, ScheduleInput, ScoringScheme, Task, TaskInstance, TaskSchedule } from '../../api/tasks';
+import type { Completion, CreatedTask, CreateTaskInput, Progress, ScheduleInput, ScoringScheme, Task, TaskInstance, TaskSchedule } from '../../api/tasks';
+import type { GoalDetails, GoalInput, SchemeInput, RewardInput, Reward, Redemption, LedgerEntry, ManagementData, RedeemedReward } from '../../api/management';
 import type { User } from '../../api/types';
 import { isUser } from '../../api/types';
 import type { ProfileInput } from '../account/model';
@@ -9,15 +10,16 @@ import { completionFeedback, type AdventureFeedback } from '../adventure/model';
 
 export interface HomeData {
   date: string;
-  progress: Progress; tasks: Task[]; schedules: TaskSchedule[]; goals: Goal[]; schemes: ScoringScheme[];
+  progress: Progress; tasks: Task[]; schedules: TaskSchedule[]; goals: GoalDetails[]; schemes: ScoringScheme[];
   day: TaskInstance[]; pending: TaskInstance[]; month: TaskInstance[];
 }
 export interface HomeSnapshot {
   selectedDate: string | null; data: HomeData | null; loading: boolean; busy: boolean;
   error: string | null; notice: string | null; lastCompletion: Completion | null;
   feedback: AdventureFeedback | null;
+  management: ManagementData | null;
 }
-const initial: HomeSnapshot = { selectedDate: null, data: null, loading: true, busy: false, error: null, notice: null, lastCompletion: null, feedback: null };
+const initial: HomeSnapshot = { selectedDate: null, data: null, loading: true, busy: false, error: null, notice: null, lastCompletion: null, feedback: null, management: null };
 const upsert = <T extends { id: number }>(items: T[], item: T) => [...items.filter(x => x.id !== item.id), item];
 
 // One serialized queue owns reads and writes. It is scoped to a single login,
@@ -33,6 +35,8 @@ export class HomeController {
   private viewVersion = 0;
   private repairedDay: string | null = null;
   private completed = new Set<number>();
+  private redeemed = new Set<number>();
+  private managementRequested = false;
   constructor(private readonly session: SessionController) {
     const context = session.captureAuth();
     if (!context) throw new Error('A signed-in session is required');
@@ -71,12 +75,13 @@ export class HomeController {
     if (!validDate(value)) return Promise.resolve();
     this.publish({ selectedDate: value, notice: null }); return this.refresh();
   };
-  refresh = (repair = false): Promise<void> => {
+  refreshManagement = () => { this.managementRequested = true; return this.refresh(false, true); };
+  refresh = (repair = false, management = this.managementRequested): Promise<void> => {
     const version = ++this.viewVersion;
     this.publish({ loading: true, error: null });
     return this.serial(async () => {
       if (version !== this.viewVersion) return;
-      try { await this.load(version, repair); }
+      try { await this.load(version, repair); if (management) await this.loadManagement(version); }
       catch (error) { if (version === this.viewVersion) this.publish({ error: this.error(error) }); }
       finally { if (version === this.viewVersion) this.publish({ loading: false }); }
     }, undefined);
@@ -92,7 +97,7 @@ export class HomeController {
     const selected = !this.state.selectedDate || (before && before.today !== progress.today && this.state.selectedDate === before.today)
       ? progress.today : this.state.selectedDate;
     const [tasks, schedules, goals, schemes, user, day, pending, month] = await Promise.all([
-      this.request<Task[]>('/tasks'), this.request<TaskSchedule[]>('/task_schedules'), this.request<Goal[]>('/goals'),
+      this.request<Task[]>('/tasks'), this.request<TaskSchedule[]>('/task_schedules'), this.request<GoalDetails[]>('/goals'),
       this.request<ScoringScheme[]>('/scoring_schemes'), this.request<User>('/users/me'),
       this.request<TaskInstance[]>(`/task_instances?date=${selected}`),
       this.request<TaskInstance[]>(`/task_instances/pending?date=${progress.today}`),
@@ -101,6 +106,17 @@ export class HomeController {
     if (version !== this.viewVersion) return;
     this.session.updateUser(user, this.context);
     this.publish({ selectedDate: selected, data: { date: selected, progress, tasks, schedules, goals, schemes, day, pending, month } });
+  }
+  private async loadManagement(version: number) {
+    const [rewards, redemptions, ledger, points] = await Promise.all([
+      this.request<Reward[]>('/rewards'), this.request<Redemption[]>('/redemptions'),
+      this.request<LedgerEntry[]>('/point_ledgers'), this.request<{ balance: number }>('/point_ledgers/balance'),
+    ]);
+    if (version !== this.viewVersion) return;
+    if (!Number.isSafeInteger(points.balance)) throw new ApiError(502, 'INVALID_RESPONSE', '无法确认积分余额，请刷新重试。');
+    const user = this.session.getSnapshot().user;
+    if (user) this.session.updateUser({ ...user, current_value: points.balance }, this.context);
+    this.publish({ management: { rewards, redemptions, ledger, balance: points.balance } });
   }
   private mutate(work: () => Promise<void>, success: string | null, reload = true): Promise<boolean> {
     if (!this.live() || this.state.busy || this.state.loading) return Promise.resolve(false);
@@ -112,7 +128,7 @@ export class HomeController {
         this.publish({ notice: success });
         if (reload) {
           const version = ++this.viewVersion;
-          try { await this.load(version, false); }
+          try { await this.load(version, false); if (this.state.management) await this.loadManagement(version); }
           catch { this.publish({ error: '操作已保存，但列表刷新失败。请刷新查看。' }); }
           finally { if (version === this.viewVersion) this.publish({ loading: false }); }
         }
@@ -122,6 +138,52 @@ export class HomeController {
       } finally { this.publish({ busy: false }); }
     }, false);
   }
+  saveGoal = (input: GoalInput, id?: number) => this.mutate(async () => {
+    const saved = await this.request<GoalDetails>(id === undefined ? '/goals' : `/goals/${id}`, input);
+    if (this.state.data) this.publish({ data: { ...this.state.data, goals: upsert(this.state.data.goals, saved) } });
+  }, id === undefined ? '目标已添加' : '目标已更新');
+  deleteGoal = (id: number) => this.mutate(async () => {
+    await this.request(`/goals/${id}/delete`, {});
+    if (this.state.data) this.publish({ data: { ...this.state.data, goals: this.state.data.goals.filter(g => g.id !== id), tasks: this.state.data.tasks.filter(t => t.goal_id !== id) } });
+  }, '目标已删除');
+  saveScheme = (input: SchemeInput, id?: number) => this.mutate(async () => {
+    const saved = await this.request<ScoringScheme>(id === undefined ? '/scoring_schemes' : `/scoring_schemes/${id}`, input);
+    if (this.state.data) this.publish({ data: { ...this.state.data, schemes: upsert(this.state.data.schemes, saved) } });
+  }, id === undefined ? '评分方案已添加' : '评分方案已更新');
+  deleteScheme = (id: number) => this.mutate(async () => {
+    await this.request(`/scoring_schemes/${id}/delete`, {});
+    if (this.state.data) this.publish({ data: { ...this.state.data, schemes: this.state.data.schemes.filter(s => s.id !== id) } });
+  }, '评分方案已删除');
+  saveReward = (input: RewardInput, id?: number) => this.mutate(async () => {
+    const saved = await this.request<Reward>(id === undefined ? '/rewards' : `/rewards/${id}`, input);
+    if (this.state.management) this.publish({ management: { ...this.state.management, rewards: upsert(this.state.management.rewards, saved) } });
+  }, id === undefined ? '奖励已添加' : '奖励已更新');
+  deleteReward = (id: number) => this.mutate(async () => {
+    await this.request(`/rewards/${id}/delete`, {});
+    if (this.state.management) this.publish({ management: { ...this.state.management, rewards: this.state.management.rewards.filter(r => r.id !== id) } });
+  }, '奖励已删除');
+  redeemReward = (reward: Reward): Promise<boolean> => {
+    if (reward.status !== 'available' || this.redeemed.has(reward.id)) return Promise.resolve(false);
+    return this.mutate(async () => {
+      // Recheck the offer before charging; an old sheet must not silently accept
+      // another session's changed price or title. The server owns the transaction.
+      const rewards = await this.request<Reward[]>('/rewards');
+      if (this.state.management) this.publish({ management: { ...this.state.management, rewards } });
+      const latest = rewards.find(item => item.id === reward.id);
+      if (!latest || latest.status !== 'available' || latest.cost_points !== reward.cost_points || latest.title !== reward.title) {
+        throw new ApiError(409, 'OFFER_CHANGED', '奖励已变更，请关闭并重新选择后确认。');
+      }
+      const result = await this.request<RedeemedReward>(`/workflows/rewards/${reward.id}/redeem`, {});
+      if (result.reward_id !== reward.id || !Number.isSafeInteger(result.remaining_points) || result.remaining_points < 0 || !Number.isSafeInteger(result.redemption_id)) {
+        throw new ApiError(502, 'INVALID_RESPONSE', '无法确认兑换结果，请刷新后查看。');
+      }
+      this.redeemed.add(reward.id);
+      const user = this.session.getSnapshot().user;
+      if (user) this.session.updateUser({ ...user, current_value: result.remaining_points }, this.context);
+      if (this.state.management) this.publish({ management: { ...this.state.management, balance: result.remaining_points,
+        rewards: upsert(this.state.management.rewards, { ...reward, status: 'redeemed' }) } });
+    }, '奖励已兑换');
+  };
   saveProfile = (input: ProfileInput) => this.mutate(async () => {
     const previous = this.session.getSnapshot().user;
     const updated = await this.request<User>('/users/me', input, 'PATCH');

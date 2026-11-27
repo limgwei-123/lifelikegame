@@ -16,9 +16,13 @@ export class ApiError extends Error {
   }
 }
 
-function messageFor(status: number, code: string, authenticated: boolean, path: string): string {
+function messageFor(status: number, code: string, authenticated: boolean, path: string, serverMessage?: unknown): string {
   if (status === 401) return authenticated ? '登录已失效，请重新登录。' : '邮箱或密码不正确。';
   if (status === 403) return path === '/auth/change-password' ? '当前密码不正确。' : '暂时无法执行此操作。';
+  if (status === 409 && path.startsWith('/workflows/rewards/')) {
+    if (serverMessage === 'Not Enough Points') return '积分不足，请先完成任务。';
+    if (serverMessage === 'Reward has already been redeemed') return '这个奖励已经兑换过了。';
+  }
   if (status === 409) return path === '/auth/signup' ? '这个邮箱已经注册，请直接登录。' : '资料已变更，请刷新后再试。';
   if (status === 404) return '这项资料已不存在，请刷新列表。';
   if (status === 422) return '请检查填写的信息后再试。';
@@ -70,7 +74,8 @@ export class ApiClient {
           ? data.code : 'REQUEST_FAILED';
         if (response.status === 401 && context) await this.unauthorized(context);
         const retry = Number(response.headers.get('Retry-After'));
-        throw new ApiError(response.status, code, messageFor(response.status, code, !!context, path),
+        const serverMessage = data && typeof data === 'object' && 'message' in data ? data.message : undefined;
+        throw new ApiError(response.status, code, messageFor(response.status, code, !!context, path, serverMessage),
           Number.isFinite(retry) && retry > 0 ? retry : undefined);
       }
       return data as T;

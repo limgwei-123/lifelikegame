@@ -1,9 +1,23 @@
 # Lifelikegame frontend
 
 React Native + Expo Router + TypeScript; one codebase for Android and Web.
-Packages 1–4 include email authentication, session handling, shared UI/theme,
+Packages 1–5 include email authentication, session handling, shared UI/theme,
 首页 / 冒险 / 我的 navigation, real homepage task workflows, boss adventure, and
-account/appearance settings. Management and AI follow packages 5–6 in the local plan.
+account/appearance settings and goal/scoring/reward management. AI follows in
+package 6 of the local plan.
+
+My also opens goals, scoring schemes, rewards and the read-only points ledger.
+Goals may include dates and free-form progress; new task forms use saved goals
+and schemes immediately. Scheme changes affect new tasks, preserving existing
+task/occurrence scoring snapshots. Deleting goals hides their unfinished tasks;
+earned points and completed history remain.
+
+Each reward can be redeemed once. Confirmation rechecks the offer; only a
+successful backend transaction changes the balance. Concurrent clicks share one
+write, failures preserve points, and late responses cannot affect another login.
+Resume refreshes previously requested management data. Redemption history keeps
+the original reward snapshot after renaming/deletion; ledger dates come from
+the backend player date. Secondary routes stay inside My with the same three tabs.
 
 My opens profile, password and appearance sheets. Nickname, built-in avatar and
 IANA timezone save through `PATCH /users/me`, sharing the serialized authenticated
@@ -138,3 +152,6 @@ uses real workflow/completion APIs to finish the first six bosses, verifies the
 second-round slime at 32 HP, and checks reduced motion and account isolation.
 The account suite also verifies profile persistence/validation/failure, timezone
 dates, live system appearance, real browser-storage errors and password revocation.
+The management suite uses real UI/API writes for goal and scoring CRUD, old/new
+scoring snapshots, reward confirmation, retained redemption history and ledger
+balance; only the insufficient-points response is simulated to verify recovery.
