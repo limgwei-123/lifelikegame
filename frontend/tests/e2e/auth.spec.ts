@@ -4,6 +4,7 @@ import { test, expect } from '@playwright/test';
 test.skip(process.env.E2E_DISPOSABLE_API !== '1', 'Requires an isolated disposable backend');
 
 test('real registration, login, navigation, restore, expiry and logout', async ({ page }, testInfo) => {
+  test.setTimeout(90_000); // Several real logins, reloads and screenshots share this workflow.
   const email = `frontend-${Date.now()}@example.com`;
   const password = 'Review-only-Password2026!';
   const errors: string[] = [];

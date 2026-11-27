@@ -236,6 +236,21 @@ test('timezone save refreshes server today and repairs against that day, never t
 
 const reward: Reward = { id: 9, user_id: user.id, title: '看电影', description: null, cost_points: 3, status: 'available',
   created_at: '2026-11-27T00:00:00Z', updated_at: '2026-11-27T00:00:00Z' };
+test('AI confirmation sends only the saved draft ID and treats consumed and uncertain results distinctly', async () => {
+  let mode = 'ok'; const bodies: unknown[] = [];
+  const { home } = await fixture(async (path, init) => {
+    if (path !== '/workflows/ai/confirm') return;
+    bodies.push(JSON.parse(String(init?.body)));
+    if (mode === 'consumed') return json({ code: 'AI_DRAFT_CONSUMED' }, 409);
+    if (mode === 'uncertain') throw new TypeError('connection lost');
+    return json({ goal: { id: 7, title: '运动', user_id: user.id, start_date: progress.today, target_date: null, current_value: null, target_value: null }, task_with_schedule_list: [{ task, schedule: null, task_instance: null }] }, 201);
+  });
+  await home.refresh();
+  assert.equal(await home.confirmAiDraft('saved-id'), 'confirmed');
+  assert.deepEqual(bodies[0], { draft_id: 'saved-id' });
+  mode = 'consumed'; assert.equal(await home.confirmAiDraft('saved-id'), 'consumed');
+  mode = 'uncertain'; assert.equal(await home.confirmAiDraft('saved-id'), 'retry');
+});
 test('resume refresh keeps previously requested management data current', async () => {
   let changed = false;
   const { home } = await fixture(async path => path === '/rewards' ? json([{ ...reward, status: changed ? 'redeemed' : 'available' }]) : undefined);

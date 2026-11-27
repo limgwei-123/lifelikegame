@@ -3,6 +3,7 @@ import { AppState, Platform, View } from 'react-native';
 import { useSession } from '../../session/SessionProvider';
 import { HomeController } from './controller';
 import { CompletionToast } from '../adventure/CompletionToast';
+import { AIProvider } from '../ai/AIProvider';
 
 const HomeContext = createContext<HomeController | null>(null);
 export function HomeProvider({ children }: PropsWithChildren) {
@@ -20,7 +21,7 @@ export function HomeProvider({ children }: PropsWithChildren) {
       controller.stop();
     };
   }, [controller]);
-  return <HomeContext.Provider value={controller}><View style={{ flex: 1 }}>{children}<FeedbackLayer /></View></HomeContext.Provider>;
+  return <HomeContext.Provider value={controller}><AIProvider home={controller}><View style={{ flex: 1 }}>{children}<FeedbackLayer /></View></AIProvider></HomeContext.Provider>;
 }
 function FeedbackLayer() {
   const { feedback, controller } = useHome();

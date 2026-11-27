@@ -59,6 +59,12 @@ test('network failures and malformed success responses become usable errors', as
   await assert.rejects(broken.request('/health'), error => error instanceof ApiError && error.code === 'INVALID_RESPONSE');
 });
 
+test('request deadlines report timeout separately from connection failures', async () => {
+  const api = new ApiClient('https://api.example.test', () => null, () => {}, async (_url, options) =>
+    new Promise((_resolve, reject) => { options?.signal?.addEventListener('abort', () => reject(new Error('aborted')), { once: true }); }));
+  await assert.rejects(api.request('/ai-planner/generate-plan', { timeoutMs: 1 }), error => error instanceof ApiError && error.code === 'TIMEOUT' && error.message.includes('超时'));
+});
+
 test('task conflicts use task feedback while duplicate signup keeps the email-specific message', async () => {
   const api = new ApiClient('https://api.example.test', () => ({ token: 'token', revision: 1 }), () => {}, async () =>
     new Response(JSON.stringify({ code: 'CONFLICT' }), { status: 409 }));

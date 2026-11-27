@@ -50,9 +50,10 @@ export function AccountScreen() {
         ['评分方案', 'layers', '/me/scoring'],
         ['奖励', 'gift', '/me/rewards'],
         ['积分记录', 'list', '/me/points'],
+        ['AI 规划', 'compass', '/me/ai'],
       ] as const).map(([title, icon, path], index) => <Pressable key={path} accessibilityRole="button" accessibilityLabel={title}
         disabled={busy} onPress={() => router.push(path)} style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 13,
-          padding: 20, borderBottomWidth: index === 3 ? 0 : 1, borderColor: colors.border, opacity: pressed || busy ? 0.6 : 1 })}>
+          padding: 20, borderBottomWidth: index === 4 ? 0 : 1, borderColor: colors.border, opacity: pressed || busy ? 0.6 : 1 })}>
         <View style={{ padding: 11, borderRadius: 13, backgroundColor: colors.accentSoft }}><Icon name={icon} color={colors.accent} size={20} /></View>
         <Text style={{ flex: 1, color: colors.text, fontSize: 15, fontWeight: '700' }}>{title}</Text>
         <Icon name="chevron-right" color={colors.muted} size={18} />

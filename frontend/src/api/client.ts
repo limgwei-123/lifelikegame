@@ -6,6 +6,7 @@ interface RequestOptions {
   auth?: boolean;
   context?: AuthContext;
   signal?: AbortSignal;
+  timeoutMs?: number;
 }
 
 export class ApiError extends Error {
@@ -19,6 +20,14 @@ export class ApiError extends Error {
 function messageFor(status: number, code: string, authenticated: boolean, path: string, serverMessage?: unknown): string {
   if (status === 401) return authenticated ? '登录已失效，请重新登录。' : '邮箱或密码不正确。';
   if (status === 403) return path === '/auth/change-password' ? '当前密码不正确。' : '暂时无法执行此操作。';
+  const aiMessages: Record<string, string> = {
+    AI_DAILY_LIMIT_EXCEEDED: '今日 AI 额度已用完，请重置后再试。',
+    AI_REQUEST_IN_PROGRESS: '已有 AI 请求正在处理中，请稍候。',
+    AI_RATE_LIMITED: 'AI 服务繁忙，请稍后再试。', AI_TIMEOUT: 'AI 生成超时，请稍后重试。',
+    AI_CONFIGURATION_ERROR: 'AI 服务尚未配置，请联系管理员。',
+    AI_INVALID_OUTPUT: 'AI 返回的计划格式不正确，请重试。', AI_DRAFT_CONSUMED: '这份计划已经确认，请到目标或首页查看。',
+  };
+  if ((path.startsWith('/ai-planner/') || path === '/workflows/ai/confirm') && Object.hasOwn(aiMessages, code)) return aiMessages[code];
   if (status === 409 && path.startsWith('/workflows/rewards/')) {
     if (serverMessage === 'Not Enough Points') return '积分不足，请先完成任务。';
     if (serverMessage === 'Reward has already been redeemed') return '这个奖励已经兑换过了。';
@@ -46,7 +55,12 @@ export class ApiClient {
     const abort = () => controller.abort();
     if (options.signal?.aborted) abort();
     options.signal?.addEventListener('abort', abort, { once: true });
-    const timeout = setTimeout(abort, 15000);
+    const timeout = setTimeout(abort, options.timeoutMs ?? 15000);
+    const connectionError = () => {
+      const cancelled = !!options.signal?.aborted, timedOut = controller.signal.aborted && !cancelled;
+      return new ApiError(0, cancelled ? 'CANCELLED' : timedOut ? 'TIMEOUT' : 'NETWORK',
+        timedOut ? '请求超时，请稍后重试。' : '暂时无法连接，请检查网络后重试。');
+    };
     try {
       let response: Response;
       try {
@@ -57,13 +71,13 @@ export class ApiClient {
           body: options.body === undefined ? undefined : JSON.stringify(options.body),
         });
       } catch {
-        throw new ApiError(0, options.signal?.aborted ? 'CANCELLED' : 'NETWORK',
-          '暂时无法连接，请检查网络后重试。');
+        throw connectionError();
       }
       if (response.status === 204) return null as T;
       let data: unknown;
       try { data = await response.json(); }
       catch {
+        if (controller.signal.aborted) throw connectionError();
         if (response.ok) throw new ApiError(502, 'INVALID_RESPONSE', '服务返回异常，请稍后重试。');
         data = null;
       }

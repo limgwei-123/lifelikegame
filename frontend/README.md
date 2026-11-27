@@ -1,10 +1,25 @@
 # Lifelikegame frontend
 
 React Native + Expo Router + TypeScript; one codebase for Android and Web.
-Packages 1–5 include email authentication, session handling, shared UI/theme,
+Packages 1–6 include email authentication, session handling, shared UI/theme,
 首页 / 冒险 / 我的 navigation, real homepage task workflows, boss adventure, and
-account/appearance settings and goal/scoring/reward management. AI follows in
-package 6 of the local plan.
+account/appearance settings, goal/scoring/reward management and AI planning.
+
+My → AI planning supports follow-up conversation and an editable draft of 1–3
+daily/weekly tasks, with owned scoring-scheme selection. Generation saves only
+a draft. Confirmation first saves the edited revision, then posts only its
+returned draft ID to `/workflows/ai/confirm` through the Home write queue.
+An uncertain confirmation retries that same ID, never silently saving another
+revision. The backend rejects already-consumed drafts, preventing duplicate
+goal creation. Confirmed plans refresh Home/management and follow ordinary
+task completion, scoring and boss rules.
+
+Conversation/draft state stays in memory across tab navigation and is cleared
+on reload/logout. No chat archive is included. Generation waits up to 75 seconds
+(three backend SDK attempts of 20 seconds plus backoff); ordinary calls retain 15 seconds.
+Quota/configuration/timeout errors preserve input and offer manual recovery.
+Configure `AI_API_KEY` and `AI_MODEL` only on the backend; never expose vendor
+keys through Expo public environment variables.
 
 My also opens goals, scoring schemes, rewards and the read-only points ledger.
 Goals may include dates and free-form progress; new task forms use saved goals
@@ -155,3 +170,9 @@ dates, live system appearance, real browser-storage errors and password revocati
 The management suite uses real UI/API writes for goal and scoring CRUD, old/new
 scoring snapshots, reward confirmation, retained redemption history and ledger
 balance; only the insufficient-points response is simulated to verify recovery.
+The AI suite additionally requires the named `lifelikegame-frontend-review-api`
+Docker container and its `frontend_review` database. Its guarded Python fixture
+seeds an actual saved draft for the browser's simulated vendor reply; authenticated
+revision/confirmation, goal/task creation and subsequent scoring are real API calls.
+It drops the first successful confirmation response and verifies same-ID recovery
+without a second revision/goal. This does not verify a live Gemini call.

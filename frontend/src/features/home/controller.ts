@@ -4,6 +4,7 @@ import type { GoalDetails, GoalInput, SchemeInput, RewardInput, Reward, Redempti
 import type { User } from '../../api/types';
 import { isUser } from '../../api/types';
 import type { ProfileInput } from '../account/model';
+import type { ConfirmationOutcome } from '../../api/ai';
 import type { SessionController } from '../../session/controller';
 import { validDate } from '../tasks/dates';
 import { completionFeedback, type AdventureFeedback } from '../adventure/model';
@@ -142,6 +143,24 @@ export class HomeController {
     const saved = await this.request<GoalDetails>(id === undefined ? '/goals' : `/goals/${id}`, input);
     if (this.state.data) this.publish({ data: { ...this.state.data, goals: upsert(this.state.data.goals, saved) } });
   }, id === undefined ? '目标已添加' : '目标已更新');
+  confirmAiDraft = async (draftId: string): Promise<ConfirmationOutcome> => {
+    let failure: unknown;
+    const ok = await this.mutate(async () => {
+      try {
+        const result = await this.request<{ goal: GoalDetails; task_with_schedule_list: CreatedTask[] }>('/workflows/ai/confirm', { draft_id: draftId });
+        if (!Number.isSafeInteger(result?.goal?.id) || !Array.isArray(result.task_with_schedule_list) || !result.task_with_schedule_list.length
+          || result.task_with_schedule_list.some(row => !Number.isSafeInteger(row?.task?.id))) throw new ApiError(502, 'INVALID_RESPONSE', '无法确认创建结果，请重新核实。');
+        if (this.state.data) this.publish({ data: { ...this.state.data, goals: upsert(this.state.data.goals, result.goal),
+          tasks: result.task_with_schedule_list.reduce((rows, row) => upsert(rows, row.task), this.state.data.tasks) } });
+      } catch (error) { failure = error; throw error; }
+    }, '计划已创建');
+    if (ok) return 'confirmed';
+    if (failure instanceof ApiError && failure.code === 'AI_DRAFT_CONSUMED') {
+      await this.refresh(); return 'consumed';
+    }
+    if (failure instanceof ApiError && [400, 403, 404, 422].includes(failure.status)) return 'invalid';
+    return 'retry';
+  };
   deleteGoal = (id: number) => this.mutate(async () => {
     await this.request(`/goals/${id}/delete`, {});
     if (this.state.data) this.publish({ data: { ...this.state.data, goals: this.state.data.goals.filter(g => g.id !== id), tasks: this.state.data.tasks.filter(t => t.goal_id !== id) } });
